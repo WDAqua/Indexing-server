@@ -35,8 +35,7 @@ public class Index {
 	private HashMap<String,Integer> mapInRelation = new HashMap<String,Integer>();
 	private ArrayList<String> mapOutRelation = new ArrayList<String>();
 	boolean load=false;
-	//private String labels = "/Users/Dennis/Downloads/labels-en-uris_it.nt";
-	String labels = "/Users/Dennis/Downloads/labels_en.nt";
+	private String labels = "/Users/Dennis/Downloads/labels-en-uris_it.nt";
 	//private String dump = "/Users/Dennis/Downloads/infobox-properties-en-uris_it.nt";
 	private String dump = "/Users/Dennis/Downloads/dump-it.nt";
 	//private String dump = "/Users/Dennis/Downloads/mappingbased-properties-en-uris_it.nt";
@@ -139,7 +138,7 @@ public class Index {
 	*/
 	
 	public void index() throws IOException, ClassNotFoundException{	
-		
+		/*
 		System.out.println("Hallo");
 		//Using example: https://github.com/apache/jena/blob/master/jena-arq/src-examples/arq/examples/riot/ExRIOT_6.java
 		PipedRDFIterator<Triple> iter = new PipedRDFIterator<Triple>();
@@ -160,10 +159,8 @@ public class Index {
         int i=1;
         while (iter.hasNext()) {
             Triple next = iter.next();
-            String uniq=next.getSubject().toString().substring(28); //http://dbpedia.org/resource/
-            //System.out.println(uniq);
-            mapIn.put(uniq,i);
-	    	mapOut.add(uniq);
+            mapIn.put(next.getSubject().toString(),i);
+	    	mapOut.add(next.getSubject().toString());
 	    	i++;
 	    	if(i % 10000 == 0) {
 	    		System.out.println(i);
@@ -275,7 +272,7 @@ public class Index {
 		executor.shutdown();
 		
 		System.out.println("j " + j);
-		
+		*/
 		
 		
 		/*
