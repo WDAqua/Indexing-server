@@ -11,14 +11,29 @@ import java.io.PrintStream;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.apache.jena.graph.Triple;
+//import org.apache.jena.graph.Triple;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.riot.lang.PipedRDFIterator;
 import org.apache.jena.riot.lang.PipedRDFStream;
 import org.apache.jena.riot.lang.PipedTriplesStream;
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.document.Document;
+import org.apache.lucene.document.Field;
+import org.apache.lucene.document.StringField;
+import org.apache.lucene.document.TextField;
+import org.apache.lucene.index.IndexWriter;
+import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.index.IndexWriterConfig.OpenMode;
+import org.apache.lucene.store.Directory;
+import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.store.RAMDirectory;
+
+import com.hp.hpl.jena.graph.Triple;
 
 import dk.ange.octave.OctaveEngine;
 import dk.ange.octave.OctaveEngineFactory;
@@ -28,19 +43,25 @@ import dk.ange.octave.type.OctaveObject;
 import org.apache.commons.math3.linear.OpenMapRealMatrix;
 import org.apache.commons.math3.linear.SparseRealMatrix;
 
+
+
 public class Index {
 	private HashMap<String,Integer> mapIn = new HashMap<String,Integer>();
 	//private TCharIntHashMap mapIn = new TCharIntHashMap();
+	//private HTreeMap<String, Integer> mapInDisk = null;
 	private ArrayList<String> mapOut = new ArrayList<String>();
 	private HashMap<String,Integer> mapInRelation = new HashMap<String,Integer>();
 	private ArrayList<String> mapOutRelation = new ArrayList<String>();
 	boolean load=false;
 	private String labels = "/Users/Dennis/Downloads/labels-en-uris_it.nt";
+	//private String labels = "/Users/Dennis/Downloads/labels_en.nt";
 	//private String dump = "/Users/Dennis/Downloads/infobox-properties-en-uris_it.nt";
 	private String dump = "/Users/Dennis/Downloads/dump-it.nt";
 	//private String dump = "/Users/Dennis/Downloads/mappingbased-properties-en-uris_it.nt";
 	private OctaveEngine octave;
 	private Integer sizeI;
+	
+	//private DB db=null;
 	
 	public Index(){
 		//octave = new OctaveEngineFactory().getScriptEngine();
@@ -48,6 +69,27 @@ public class Index {
 		factory.setOctaveProgram(new File("/usr/local/bin/octave"));
 		octave = factory.getScriptEngine();
 		octave.setWriter(null);
+		/*
+		DB db = DBMaker.newMemoryDB()
+				//.newFileDB(new File("testdb"))
+		        //.newMemoryDB()
+		        .closeOnJvmShutdown()
+		        //.transactionDisable()
+		        //.mmapFileEnable()
+		        //.allocateIncrement(512 * 1024*1024)
+		        //.cacheHashTableEnable()
+		        //.cacheSize(1000000)
+		        //.asyncFlushDelay(100)
+	            .compressionEnable()
+		        //.fileMmapEnable()
+                .transactionDisable()
+		        //.transactionDisable()
+		        .make();
+		mapInDisk = db.createHashMap("map")
+		        .keySerializer(Serializer.STRING)
+		        .valueSerializer(Serializer.INTEGER)
+		        .makeOrGet();
+		*/
 	}
 	
 	private void load() throws IOException, ClassNotFoundException{
@@ -73,7 +115,7 @@ public class Index {
 	}
 	
 	
-	public OpenMapRealMatrix get(String[] URI) throws ClassNotFoundException, IOException{
+	public OpenMapRealMatrix get(String[] URI) throws IllegalArgumentException{
 		String[] tmp= new String[URI.length];
 		int k=0;
 		long startTime = System.currentTimeMillis();
@@ -83,6 +125,8 @@ public class Index {
 				tmp[k] = mapIn.get(uri).toString();
 			} else if (mapInRelation.containsKey(uri)){
 				tmp[k] = ((Integer)(sizeI+mapInRelation.get(uri))).toString();
+			} else {
+				throw new IllegalArgumentException("The URI "+ uri +" is not in the index!");
 			}
 			k++;
 		}
@@ -138,7 +182,7 @@ public class Index {
 	*/
 	
 	public void index() throws IOException, ClassNotFoundException{	
-		/*
+		
 		System.out.println("Hallo");
 		//Using example: https://github.com/apache/jena/blob/master/jena-arq/src-examples/arq/examples/riot/ExRIOT_6.java
 		PipedRDFIterator<Triple> iter = new PipedRDFIterator<Triple>();
@@ -156,16 +200,58 @@ public class Index {
 
         // Start the parser on another thread
         executor.submit(parser);
-        int i=1;
+        Integer i=1;
+       
+        /*
+        Analyzer analyzer = new StandardAnalyzer();
+        Directory dir = new RAMDirectory();
+        IndexWriterConfig iwc = new IndexWriterConfig(analyzer);
+		iwc.setOpenMode(OpenMode.CREATE);
+		IndexWriter writer = new IndexWriter(dir, iwc);
+        */
+        /*
+        TempDictionary dictionary = modHDT.getDictionary();
+		//TempTriples triples = modHDT.getTriples();
+
+        // Load RDF in the dictionary and generate triples
+        dictionary.startProcessing();
+        long num=0;
+        long size=0;
+        while(iter.hasNext()) {
+        	TripleString triple = iter.next();
+        	//triples.insert(
+        			dictionary.insert(triple.getSubject(), TripleComponentRole.SUBJECT);
+        			//dictionary.insert(triple.getPredicate(), TripleComponentRole.PREDICATE),
+        			//dictionary.insert(triple.getObject(), TripleComponentRole.OBJECT)
+        	//		);
+        	num++;
+			size+=triple.getSubject().length()+4;  // Spaces and final dot
+        	ListenerUtil.notifyCond(listener, "Loaded "+num+" triples", num, 0, 100);
+        }
+        dictionary.endProcessing();
+        */
+        
         while (iter.hasNext()) {
             Triple next = iter.next();
+            
+            //Document doc = new Document();
+            
+            //doc.add(new StringField("id", i.toString(), Field.Store.YES));
+            //doc.add(new TextField("URI", next.getSubject().toString(), Field.Store.NO));
+            
+            //mapInDisk.put(next.getSubject().toString(),i);
+            
             mapIn.put(next.getSubject().toString(),i);
 	    	mapOut.add(next.getSubject().toString());
 	    	i++;
 	    	if(i % 10000 == 0) {
 	    		System.out.println(i);
+	    		//db.commit();
 	    	}
         }
+        
+        //writer.close();
+        
         sizeI=i;
         System.out.println("Number"+i);
         executor.shutdownNow();
@@ -245,6 +331,7 @@ public class Index {
 		PrintStream printStream2 = new PrintStream(matrixR);
 		System.out.println("Hallo");
 		int j=0;
+		
 		while ( iter.hasNext()){
 			Triple next = iter.next();
 			if (next.getObject().isURI()){
@@ -272,7 +359,7 @@ public class Index {
 		executor.shutdown();
 		
 		System.out.println("j " + j);
-		*/
+		
 		
 		
 		/*
