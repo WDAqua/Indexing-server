@@ -12,7 +12,7 @@ public class Server2 {
         try {
         	System.out.println("Server started!");
         	Index i = new Index();
-        	//i.index();
+        	i.index();
         	System.out.println("Indexing finished!");
         	System.out.println("I'm ready!");
         	

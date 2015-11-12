@@ -1,7 +1,9 @@
 import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInput;
@@ -11,6 +13,9 @@ import java.io.PrintStream;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Random;
+import java.util.Scanner;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -32,6 +37,9 @@ import org.apache.lucene.index.IndexWriterConfig.OpenMode;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.store.RAMDirectory;
+import org.ujmp.core.SparseMatrix;
+import org.ujmp.core.bigintegermatrix.BigIntegerMatrix;
+import org.ujmp.core.intmatrix.SparseIntMatrix;
 
 import com.hp.hpl.jena.graph.Triple;
 
@@ -39,6 +47,9 @@ import dk.ange.octave.OctaveEngine;
 import dk.ange.octave.OctaveEngineFactory;
 import dk.ange.octave.type.OctaveDouble;
 import dk.ange.octave.type.OctaveObject;
+import no.uib.cipr.matrix.io.MatrixVectorReader;
+import no.uib.cipr.matrix.sparse.CompColMatrix;
+import no.uib.cipr.matrix.sparse.FlexCompColMatrix;
 
 import org.apache.commons.math3.linear.OpenMapRealMatrix;
 import org.apache.commons.math3.linear.SparseRealMatrix;
@@ -60,37 +71,8 @@ public class Index {
 	//private String dump = "/Users/Dennis/Downloads/mappingbased-properties-en-uris_it.nt";
 	private OctaveEngine octave;
 	private Integer sizeI;
+	private CompColMatrix matrixIndex;
 	
-	//private DB db=null;
-	
-	public Index(){
-		//octave = new OctaveEngineFactory().getScriptEngine();
-		OctaveEngineFactory factory = new OctaveEngineFactory();
-		factory.setOctaveProgram(new File("/usr/local/bin/octave"));
-		octave = factory.getScriptEngine();
-		octave.setWriter(null);
-		/*
-		DB db = DBMaker.newMemoryDB()
-				//.newFileDB(new File("testdb"))
-		        //.newMemoryDB()
-		        .closeOnJvmShutdown()
-		        //.transactionDisable()
-		        //.mmapFileEnable()
-		        //.allocateIncrement(512 * 1024*1024)
-		        //.cacheHashTableEnable()
-		        //.cacheSize(1000000)
-		        //.asyncFlushDelay(100)
-	            .compressionEnable()
-		        //.fileMmapEnable()
-                .transactionDisable()
-		        //.transactionDisable()
-		        .make();
-		mapInDisk = db.createHashMap("map")
-		        .keySerializer(Serializer.STRING)
-		        .valueSerializer(Serializer.INTEGER)
-		        .makeOrGet();
-		*/
-	}
 	
 	private void load() throws IOException, ClassNotFoundException{
 		InputStream file = new FileInputStream("/Users/Dennis/Downloads/mapIn");
@@ -135,9 +117,8 @@ public class Index {
 		System.out.println("Found: "+ estimatedTime);
 		System.out.println(indeces);
 		//Selects the submatrix containing the rows and columns contained in indeces
-		//String func="ans=full(B(["+indeces+" ] , [ "+indeces+"]))";
 		startTime = System.currentTimeMillis();
-		octave.eval("C = full(B(["+indeces+" ] , [ "+indeces+"]))");
+		octave.eval("C = full(B(["+indeces+" ] , [ "+indeces+"]));");
 		estimatedTime = System.currentTimeMillis() - startTime;
 		System.out.println("eval: "+estimatedTime);
 		OctaveDouble ans = octave.get(OctaveDouble.class, "C");
@@ -169,7 +150,7 @@ public class Index {
 		return (Integer) mapIn.get(URI);
 	}
 	
-	/*
+	
 	public String get(Integer i) throws IOException, ClassNotFoundException{
 		if (load==false){
 			System.out.println("Begin loading");
@@ -179,10 +160,9 @@ public class Index {
 		}
 		return (String)mapOut.get(i);
 	}
-	*/
 	
 	public void index() throws IOException, ClassNotFoundException{	
-		
+		/*
 		System.out.println("Hallo");
 		//Using example: https://github.com/apache/jena/blob/master/jena-arq/src-examples/arq/examples/riot/ExRIOT_6.java
 		PipedRDFIterator<Triple> iter = new PipedRDFIterator<Triple>();
@@ -201,7 +181,7 @@ public class Index {
         // Start the parser on another thread
         executor.submit(parser);
         Integer i=1;
-       
+       */
         /*
         Analyzer analyzer = new StandardAnalyzer();
         Directory dir = new RAMDirectory();
@@ -230,7 +210,7 @@ public class Index {
         }
         dictionary.endProcessing();
         */
-        
+        /*
         while (iter.hasNext()) {
             Triple next = iter.next();
             
@@ -359,37 +339,19 @@ public class Index {
 		executor.shutdown();
 		
 		System.out.println("j " + j);
-		
-		
-		
-		/*
-		octave:110> I1=I;
-		octave:111> I2=I*I;
-		octave:112> I3=I*I*I;
-		octave:113> B1=spones(I1);
-		octave:114> B2=spones(I2);
-		octave:115> B3=spones(I3);
-		octave:116> C1=B2-B1;
-		octave:117> C1=B1;
-		octave:118> C2=B2-B1;
-		octave:119> C3=B3-B2-B1;
-		octave:120> D1=C1;
-		octave:121> D2=spfun(@(x)x.*(x>=0),C2);
-		octave:122> D3=spfun(@(x)x.*(x>=0),C3);
-		octave:123> P=D1+2*D2+3*D3;
-		octave:124> P
-
-		 */
-		
+		*/
 		
 		//Use the octave instance to compute matrix multiplication
+		OctaveEngineFactory factory = new OctaveEngineFactory();
+		factory.setOctaveProgram(new File("/usr/local/bin/octave"));
+		octave = factory.getScriptEngine();
+			
+		//Compute the shortest path of length maximal 3
 		octave.eval("load /Users/Dennis/Downloads/matrixI; ");
 		octave.eval("I1 = spconvert(matrixI); ");
 		
 		octave.eval("I2=I1*I1;");
 		octave.eval("I3=I2*I1;");
-		
-		//octave.eval("B=I3;");
 		
 		octave.eval("B1=spones(I1);");
 		octave.eval("B2=spones(I2);");
@@ -421,7 +383,129 @@ public class Index {
 		octave.eval("clear D2;");
 		octave.eval("clear D3;");
 		
+		octave.eval("[i,j,val] = find(B);");
+		octave.eval("data_dump = [i,j,val];");
+		
+		octave.eval("fid = fopen(\'/Users/Dennis/Downloads/export\',\'w\');");
+		octave.eval("fprintf( fid,\'%%%%MatrixMarket matrix coordinate real general\\n\' );");
+		octave.eval("fprintf( fid,\'%d %d %d \\n\',size(B),nnz(B) );");
+		octave.eval("fprintf( fid,\'%d %d %d\\n', data_dump );");
+		
+		//Octave is not needed anymore
+		octave.close();
+		
+		
+		
+		//MatrixVectorReader r = new MatrixVectorReader(new BufferedReader(new FileReader("/Users/Dennis/Downloads/matrixExport")));
+		
+		//CompColMatrix test = new CompColMatrix(r);
+		
+		//int numColumns = 793452;
+		//int[][] nz = new int[numColumns][0];
+	        
+	    
+		//SparseIntMatrix m = (SparseIntMatrix) SparseMatrix(1,2); .Factory.zeros(793452, 793452);
+		//SparseMatrix sparse = SparseMatrix.Factory.zeros(793452, 793452);
+		
 		/*
+		Scanner s = new Scanner(new BufferedReader(new FileReader("/Users/Dennis/Downloads/matrixExport")));
+        int i=0;
+        int j=0;
+        
+        int[] row = new int[26219740];
+        int[] column = new int[26219740];
+        double[] entry = new double[26219740];
+        
+        List col = new ArrayList();
+		while (s.hasNext()) {
+			int a = Double.valueOf(s.next()).intValue()-1;
+	       	int b = Double.valueOf(s.next()).intValue()-1;
+	       	int c = Double.valueOf(s.next()).intValue();
+	       	
+	       	row[i]=a;
+	       	column[i]=b;
+	       	entry[i]=c;
+	       	
+	       	if (j==b){
+        		col.add(a);
+        		//System.out.println(a);
+        	 } else {
+	        	 nz[j]=new int [col.size()];
+	        	 for (int k=0; k<col.size(); k++){
+	        		 nz[j][k]=(int) col.get(k);
+	        	 }
+	        	 j++;
+	        	 col.clear();
+	        	 col.add(a);
+	        	 //m.setAsInt(c, a, b);
+        	 }
+        	 i++;
+        	 if (i%10000 == 0){
+        		 System.out.println(i);
+        	 }
+         } 
+		nz[numColumns-1]=new int [col.size()];
+   	 	for (int k=0; k<col.size(); k++){
+   	 		nz[numColumns-1][k]=(int) col.get(k);
+   	 	}
+		/*
+		int[][] nz = new int[4][];
+		nz[0] = new int [1];
+		nz[1] = new int [0];
+		nz[2] = new int [0];
+		nz[3] = new int [1];
+		nz[0][0] = 2;
+		nz[3][0] = 1;
+		*/
+		
+		System.out.println("Start");
+		BufferedReader r= new BufferedReader(new FileReader("/Users/Dennis/Downloads/export"));
+		MatrixVectorReader s = new MatrixVectorReader(r);
+		matrixIndex = new CompColMatrix(s);
+		System.out.println("End");
+		
+		int[] row = new int[200];
+		//int[] col = new int[200];
+		for (int i=0; i< 200 ; i++){
+				row[i]=(int)(Math.random() * 793452);
+		}
+		
+		long startTime = System.currentTimeMillis();
+		for (int i=0; i< 200 ; i++){
+			for (int j=0; j< 200 ; j++){
+				matrixIndex.get(i, j);
+			}
+		}
+		long estimatedTime = System.currentTimeMillis() - startTime;
+		
+		System.out.println(estimatedTime);
+		//System.out.println(test.get(21682, 0));
+		
+		//ObjectSizeFetcher.getObjectSize(test);
+		
+		//for (int k=0; k<26219740; k++){
+		//	test.set(row[k], column[k], entry[k]);
+		//}
+		//CompColMatrix test = new CompColMatrix(test);
+		
+	        
+		
+		/*
+		OpenMapRealMatrix B = new  OpenMapRealMatrix(793452,793452); 
+		System.out.println("Length"+URI.length);
+		for (int i=0; i<URI.length; i++){
+			for (int j=0; j<URI.length; j++){
+				//A[i][j]=(int)a[j+URI.length*i];
+				if (a[j+URI.length*i]!=0){
+					B.setEntry(i, j, a[j+URI.length*i]);
+				}
+				//System.out.println(A[i][j]);
+			}
+		}
+		*/
+		
+		/*
+		// To include also the relations
 		octave.eval("load /Users/Dennis/Downloads/matrixR; ");
 		octave.eval("R = spconvert(matrixR); ");
 		octave.eval("IR = I*R; ");
@@ -452,18 +536,5 @@ public class Index {
 		*/
 		load();
 		load=true;
-		//octave.eval("I2 = I*I; ");
-		//octave.eval("I3 = I2*I; ");
-		//octave.eval("b = nnz(I); ");
-		
-		//Matrix B = new LinkedSparseMatrix(i,i);
-		
-		//System.out.println("Here");
-		
-		//long startTime = System.currentTimeMillis();
-		//A.mult(A, B);
-		//long estimatedTime = System.currentTimeMillis() - startTime;
-		//System.out.println(estimatedTime);
-		
 	}
 }
