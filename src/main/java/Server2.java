@@ -9,11 +9,17 @@ import java.io.*;
 public class Server2 {
 	private static boolean acceptMore = true;
     public static void main(String[] args) throws IOException, ClassNotFoundException {
-        try {
+    	
+    	String octavePath="/usr/local/bin/octave";
+    	String labels = "/Users/Dennis/Downloads/labels-en-uris_it.nt";
+    	String dump = "/Users/Dennis/Downloads/dump-it.nt";
+    	
+    	try {
         	System.out.println("Server started!");
+        	System.out.println("Indexing starts ...");
         	Index i = new Index();
-        	i.index();
-        	System.out.println("Indexing finished!");
+        	i.index(octavePath, labels, dump);
+        	System.out.println("\n\nIndexing finished!");
         	System.out.println("I'm ready!");
         	
             ServerSocket serverSocket = new ServerSocket(1112);
@@ -26,11 +32,8 @@ public class Server2 {
 				os = socket.getOutputStream();
 				ObjectOutputStream out = new ObjectOutputStream(os);
 				try {
-					//long startTime = System.currentTimeMillis();
 					System.out.println("Computing");
 					OpenMapRealMatrix result = i.get(URI);
-					//long estimatedTime = System.currentTimeMillis() - startTime;
-					//System.out.println("Computed!: " + estimatedTime);
 		        	out.writeObject(result);
 				} catch (IllegalArgumentException e){
 					out.writeObject(e);
