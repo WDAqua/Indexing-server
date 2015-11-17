@@ -10,15 +10,11 @@ public class Server2 {
 	private static boolean acceptMore = true;
     public static void main(String[] args) throws IOException, ClassNotFoundException {
     	
-    	String octavePath="/usr/local/bin/octave";
-    	String labels = "/Users/Dennis/Downloads/labels-en-uris_it.nt";
-    	String dump = "/Users/Dennis/Downloads/dump-it.nt";
-    	
     	try {
         	System.out.println("Server started!");
         	System.out.println("Indexing starts ...");
         	Index i = new Index();
-        	i.index(octavePath, labels, dump);
+        	i.index();
         	System.out.println("\n\nIndexing finished!");
         	System.out.println("I'm ready!");
         	
@@ -36,6 +32,7 @@ public class Server2 {
 					OpenMapRealMatrix result = i.get(URI);
 		        	out.writeObject(result);
 				} catch (IllegalArgumentException e){
+					System.out.println(e);
 					out.writeObject(e);
 				} finally {
 					System.out.println("Sent to client!");
@@ -50,4 +47,3 @@ public class Server2 {
         }
     }
 }
-

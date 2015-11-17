@@ -11,60 +11,83 @@ import java.util.concurrent.Executors;
 //Java wrapper around octave
 import dk.ange.octave.OctaveEngine;
 import dk.ange.octave.OctaveEngineFactory;
+import dk.ange.octave.type.OctaveDouble;
 //Compressed column storage implementation
 import no.uib.cipr.matrix.io.MatrixVectorReader;
 import no.uib.cipr.matrix.sparse.CompColMatrix;
 //Sparse matrix implementation
 import org.apache.commons.math3.linear.OpenMapRealMatrix;
+import org.apache.jena.graph.Triple;
 //For parsing RDF files
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.riot.lang.PipedRDFIterator;
 import org.apache.jena.riot.lang.PipedRDFStream;
 import org.apache.jena.riot.lang.PipedTriplesStream;
 import org.apache.log4j.BasicConfigurator;
-import com.hp.hpl.jena.graph.Triple;
 
 public class Index {
+	
+	
+	String octavePath="/usr/local/bin/octave";
+	String labels = "/Users/Dennis/Downloads/labels-en-uris_it.nt";
+	String dump = "/Users/Dennis/Downloads/dump-it.nt";
+	
+	
 	private HashMap<String,Integer> mapIn = new HashMap<String,Integer>();
 	private ArrayList<String> mapOut = new ArrayList<String>();
 	private HashMap<String,Integer> mapInRelation = new HashMap<String,Integer>();
 	private ArrayList<String> mapOutRelation = new ArrayList<String>();
 	private CompColMatrix matrixIndex;
+	private OctaveEngine octave;
+
+	Index(){
+		OctaveEngineFactory factory = new OctaveEngineFactory();
+		factory.setOctaveProgram(new File(octavePath));
+		octave = factory.getScriptEngine();
+	}
 	
 	public OpenMapRealMatrix get(String[] URI) throws IllegalArgumentException{
-		int[] indeces= new int[URI.length];
+		String[] tmp= new String[URI.length];
 		int k=0;
 		long startTime = System.currentTimeMillis();
 		for (String uri : URI){
 			//System.out.println(uri);
 			if (mapIn.containsKey(uri)){
-				indeces[k] = mapIn.get(uri)-1;
+				tmp[k] = mapIn.get(uri).toString();
 			} else if (mapInRelation.containsKey(uri)){
-				indeces[k] = (Integer)(matrixIndex.numRows()+mapInRelation.get(uri));
+				tmp[k] = ((Integer)(mapIn.size()+mapInRelation.get(uri))).toString();
 			} else {
 				throw new IllegalArgumentException("The URI "+ uri +" is not in the index!");
 			}
 			k++;
 		}
-		long estimatedTime = System.currentTimeMillis() - startTime;
-		System.out.println("Found: "+ estimatedTime);
-		System.out.println(indeces);
+		String indeces = String.join(", ", tmp);
 		
-		//Selects the submatrix containing the rows and columns contained in indeces
-		startTime = System.currentTimeMillis();
-		OpenMapRealMatrix B = new  OpenMapRealMatrix(URI.length,URI.length); 
-		for (int i=0; i< URI.length ; i++){
-			for (int j=0; j< URI.length ; j++){
-				int e=(int) matrixIndex.get(indeces[i], indeces[j]);
-				if (e!=0){
-					B.setEntry(i, j, e);
-				}
-			}
-		}
-		estimatedTime = System.currentTimeMillis() - startTime;
-		System.out.println("Entries: "+ estimatedTime);
 		
-		return B;
+        //Selects the submatrix containing the rows and columns contained in indeces
+        //String func="ans=full(B(["+indeces+" ] , [ "+indeces+"]))";
+        startTime = System.currentTimeMillis();
+        octave.eval("C = full(B(["+indeces+" ] , [ "+indeces+"]));");
+        long estimatedTime = System.currentTimeMillis() - startTime;
+        System.out.println("eval: "+estimatedTime);
+        OctaveDouble ans = octave.get(OctaveDouble.class, "C");
+        double[] a = ans.getData();
+        estimatedTime = System.currentTimeMillis() - startTime;
+        System.out.println("Retrive: "+estimatedTime);
+        //int[][] A=new int[URI.length][URI.length];
+        OpenMapRealMatrix B = new  OpenMapRealMatrix(URI.length,URI.length);
+        System.out.println("Length"+URI.length);
+        for (int i=0; i<URI.length; i++){
+                for (int j=0; j<URI.length; j++){
+                        //A[i][j]=(int)a[j+URI.length*i];
+                        if (a[j+URI.length*i]!=0){
+                                B.setEntry(i, j, a[j+URI.length*i]);
+                        }
+                        //System.out.println(A[i][j]);
+                }
+        }
+        //System.out.println(A.toString());
+        return B;
 	}
 	
 	
@@ -77,7 +100,7 @@ public class Index {
 		return (String)mapOut.get(i);
 	}
 	
-	public void index(String octavePath, String labels, String dump) throws IOException, ClassNotFoundException{
+	public void index() throws IOException, ClassNotFoundException{
 		//create the index folder
 		File folder = new File("index/");
 		if (!folder.exists()) folder.mkdir();
@@ -192,14 +215,12 @@ public class Index {
 		System.out.println("Number triples: " + j);
 		System.out.println("The shortest paths are computed ... ");
 		//Use the octave instance to compute matrix multiplication
-		OctaveEngineFactory factory = new OctaveEngineFactory();
-		factory.setOctaveProgram(new File(octavePath));
-		OctaveEngine octave = factory.getScriptEngine();
+		
 		
 		
 		//Compute the shortest path of length maximal 3
-		octave.eval("load "+System.getProperty("user.dir")+"/index/matrixI"+"; ");
-		octave.eval("I1 = spconvert(matrixI); ");
+		octave.eval("load "+System.getProperty("user.dir")+"/index/matrixI1"+"; ");
+		octave.eval("I1 = spconvert(matrixI1); ");
 		
 		octave.eval("I2=I1*I1;");
 		octave.eval("I3=I2*I1;");
@@ -233,7 +254,7 @@ public class Index {
 		octave.eval("clear D1;");
 		octave.eval("clear D2;");
 		octave.eval("clear D3;");
-		
+		/*
 		System.out.println("Transferring matrix from octave to java ... ");
 		octave.eval("[i,j,val] = find(B);");
 		octave.eval("data_dump = [i,j,val];");
@@ -251,5 +272,6 @@ public class Index {
 		MatrixVectorReader s = new MatrixVectorReader(reader);
 		matrixIndex = new CompColMatrix(s);
 		reader.close();
+		*/
 	}
 }
