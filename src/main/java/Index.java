@@ -55,14 +55,16 @@ public class Index {
 			if (mapIn.containsKey(uri)){
 				tmp[k] = mapIn.get(uri).toString();
 			} else if (mapInRelation.containsKey(uri)){
-				tmp[k] = ((Integer)(mapIn.size()+mapInRelation.get(uri))).toString();
+				//System.out.println("size mapIn: "+ mapIn.size());
+				tmp[k] = ((Integer)(mapIn.size()+1+mapInRelation.get(uri))).toString();
+				//System.out.println("mapInRelation index: "+ mapInRelation.get(uri));
 			} else {
 				throw new IllegalArgumentException("The URI "+ uri +" is not in the index!");
 			}
 			k++;
 		}
 		String indeces = String.join(", ", tmp);
-		
+		//System.out.println(indeces);
 		
         //Selects the submatrix containing the rows and columns contained in indeces
         //String func="ans=full(B(["+indeces+" ] , [ "+indeces+"]))";
@@ -80,8 +82,8 @@ public class Index {
         for (int i=0; i<URI.length; i++){
                 for (int j=0; j<URI.length; j++){
                         //A[i][j]=(int)a[j+URI.length*i];
-                        if (a[j+URI.length*i]!=0){
-                                B.setEntry(i, j, a[j+URI.length*i]);
+                        if (a[i+URI.length*j]!=0){
+                                B.setEntry(i, j, a[i+URI.length*j]);
                         }
                         //System.out.println(A[i][j]);
                 }
@@ -137,6 +139,7 @@ public class Index {
         }
         System.out.println("Number resources: "+i);
         executor.shutdownNow();
+        System.out.println("size mapIn: "+ mapIn.size());
         
         //Relation extraction
         iter = new PipedRDFIterator<Triple>();
@@ -192,6 +195,8 @@ public class Index {
 				Object s = mapIn.get(next.getSubject().toString());
 				Object p = mapInRelation.get(next.getPredicate().toString()); 
 				Object o = mapIn.get(next.getObject().toString());
+				//System.out.println(next.getSubject().toString()+next.getPredicate().toString()+next.getObject().toString());
+				//System.out.println(s.toString()+p.toString()+o.toString());
 				if (s!=null){
 					if (s!=null && o!=null){
 						printStreamI.print(s + " " + o + " 1\n");
@@ -200,8 +205,15 @@ public class Index {
 						j++;
 					} else {
 						printStreamR1.print(s + " " + p + " 1\n");
+						j++;
 					}	
 				}	
+			} else {
+				Object s = mapIn.get(next.getSubject().toString());
+				Object p = mapInRelation.get(next.getPredicate().toString());
+				if (s!=null){
+					printStreamR1.print(s + " " + p + " 1\n");
+				}
 			}
 		}
 		printStreamI.print(i + " " + i + " 0\n");
@@ -217,7 +229,7 @@ public class Index {
 		//Use the octave instance to compute matrix multiplication
 		
 		
-		
+		/*
 		//Compute the shortest path of length maximal 3
 		octave.eval("load "+System.getProperty("user.dir")+"/index/matrixI1"+"; ");
 		octave.eval("I1 = spconvert(matrixI1); ");
@@ -254,24 +266,121 @@ public class Index {
 		octave.eval("clear D1;");
 		octave.eval("clear D2;");
 		octave.eval("clear D3;");
-		/*
-		System.out.println("Transferring matrix from octave to java ... ");
-		octave.eval("[i,j,val] = find(B);");
-		octave.eval("data_dump = [i,j,val];");
-		octave.eval("C = [i';j';val'];");
-		
-		octave.eval("fid = fopen(\'"+System.getProperty("user.dir")+"/index/export"+"\',\'w\');");
-		octave.eval("fprintf( fid,\'%%%%MatrixMarket matrix coordinate real general\\n\' );");
-		octave.eval("fprintf( fid,\'%d %d %d \\n\',size(B),nnz(B) );");
-		octave.eval("fprintf( fid,\'%d %d %d\\n', C );");
-		
-		//Octave is not needed anymore
-		octave.close();
-		
-		BufferedReader reader= new BufferedReader(new FileReader(System.getProperty("user.dir")+"/index/export"));
-		MatrixVectorReader s = new MatrixVectorReader(reader);
-		matrixIndex = new CompColMatrix(s);
-		reader.close();
 		*/
+		
+		
+		//Include relations
+		//Compute the shortest path of length maximal 3
+		octave.eval("load "+System.getProperty("user.dir")+"/index/matrixI1"+"; ");
+		octave.eval("I1 = spconvert(matrixI1); ");
+		octave.eval("load "+System.getProperty("user.dir")+"/index/matrixR1"+"; ");
+		octave.eval("R1 = spconvert(matrixR1); ");
+		octave.eval("load "+System.getProperty("user.dir")+"/index/matrixR2"+"; ");
+		octave.eval("R2 = spconvert(matrixR2); ");
+		
+		octave.eval("i=size(I1,1);");
+		octave.eval("r=size(R1,2);");
+		
+		octave.eval("I2=I1*I1;");
+		octave.eval("I3=I2*I1;");
+		
+		octave.eval("A1up=[sparse(i,i) R1];");
+		octave.eval("A1down=[R2, sparse(r,r)];");
+		octave.eval("A1=[A1up ; A1down];");
+		
+		
+		octave.eval("clear A1up;");
+		octave.eval("clear A1down;");
+		
+		octave.eval("A2up=[I1 sparse(i,r)];");
+		octave.eval("A2down=[sparse(r,i) R2*R1];");
+		octave.eval("A2=[A2up ; A2down];");
+		
+		octave.eval("clear A2up;");
+		octave.eval("clear A2down;");
+		
+		octave.eval("A3up=[sparse(i,i) I*R1];");
+		octave.eval("A3down=[R2*I, sparse(r,r)];");
+		octave.eval("A3=[A3up ; A3down];");
+		
+		octave.eval("clear A3up;");
+		octave.eval("clear A3down;");
+		octave.eval("clear I;");
+		
+		octave.eval("A4up=[I2 sparse(i,r)];");
+		octave.eval("A4down=[sparse(r,i) R2*I2*R1];");
+		octave.eval("A4=[A4up ; A4down];");
+		
+		octave.eval("clear A4up;");
+		octave.eval("clear A4down;");
+		
+		octave.eval("A5up=[sparse(i,i) I2*R1];");
+		octave.eval("A5down=[R2*I2, sparse(r,r)];");
+		octave.eval("A5=[A5up ; A5down];");
+		
+		octave.eval("clear A5up;");
+		octave.eval("clear A5down;");
+		octave.eval("clear I2;");
+		
+		octave.eval("A6up=[I3 sparse(i,r)];");
+		octave.eval("A6down=[sparse(r,i) R2*I3*R1];");
+		octave.eval("A6=[A6up ; A6down];");
+		
+		octave.eval("clear A5up;");
+		octave.eval("clear A5down;");
+		octave.eval("clear I3;");
+		
+		
+		octave.eval("B1=spones(A1);");
+		octave.eval("clear A1;");
+		octave.eval("B2=spones(A2);");
+		octave.eval("clear A2;");
+		octave.eval("B3=spones(A3);");
+		octave.eval("clear A3;");
+		octave.eval("B4=spones(A4);");
+		octave.eval("clear A4;");
+		octave.eval("B5=spones(A5);");
+		octave.eval("clear A5;");
+		octave.eval("B6=spones(A6);");
+		octave.eval("clear A6;");
+		
+		octave.eval("C1=B1;");
+		octave.eval("C2=B2;");
+		octave.eval("C3=B3-B1;");
+		octave.eval("C4=B4-B2;");
+		octave.eval("C5=B5-B3-B1;");
+		octave.eval("C6=B6-B4-B2;");
+		
+		octave.eval("clear B1;");
+		octave.eval("clear B2;");
+		octave.eval("clear B3;");
+		octave.eval("clear B4;");
+		octave.eval("clear B5;");
+		octave.eval("clear B6;");
+		
+		octave.eval("D1=C1;");
+		octave.eval("D2=C2;");
+		octave.eval("D3=spfun(@(x)x.*(x>=0),C3);");
+		octave.eval("D4=spfun(@(x)x.*(x>=0),C4);");
+		octave.eval("D5=spfun(@(x)x.*(x>=0),C5);");
+		octave.eval("D6=spfun(@(x)x.*(x>=0),C6);");
+		
+		octave.eval("clear C1;");
+		octave.eval("clear C2;");
+		octave.eval("clear C3;");
+		octave.eval("clear C4;");
+		octave.eval("clear C5;");
+		octave.eval("clear C6;");
+		
+		octave.eval("B=D1+2*D2+3*D3+4*D4+5*D5+6*D6;");
+		
+		octave.eval("clear D1;");
+		octave.eval("clear D2;");
+		octave.eval("clear D3;");
+		octave.eval("clear D4;");
+		octave.eval("clear D5;");
+		octave.eval("clear D6;");
+		
+		
 	}
 }
