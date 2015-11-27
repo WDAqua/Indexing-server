@@ -29,7 +29,7 @@ public class Index {
 	
 	
 	String octavePath="/usr/local/bin/octave";
-	String labels = "/Users/Dennis/Downloads/labels-en-uris_it.nt";
+	//String labels = "/Users/Dennis/Downloads/labels-en-uris_it.nt";
 	String dump = "/Users/Dennis/Downloads/dump-it.nt";
 	
 	
@@ -117,24 +117,35 @@ public class Index {
             @Override
             public void run() {
                 // Call the parsing process.
-                RDFDataMgr.parse(inputStream, labels);
+                RDFDataMgr.parse(inputStream, dump);
             }
         };
 
         // Start the parser on another thread
         executor.submit(parser);
         Integer i=1;
-        
-        System.out.println("Parse the label dump ...");
+        Integer before=0;
+        System.out.println("Parse the dump and search for all subjects objects...");
         System.out.println("If this slows down, and does not come to an end, you probably need more RAM!");
         while (iter.hasNext()) {
             Triple next = iter.next();
-            
-            mapIn.put(next.getSubject().toString(),i);
-	    	mapOut.add(next.getSubject().toString());
-	    	i++;
+            if (mapIn.containsKey(next.getSubject().toString())==false){
+            	mapIn.put(next.getSubject().toString(),i);
+    	    	mapOut.add(next.getSubject().toString());
+        		i++;
+        	}
+            if (next.getObject().isURI()==true){ 
+            	if (mapIn.containsKey(next.getObject().toString())==false){
+	            	mapIn.put(next.getObject().toString(),i);
+	    	    	mapOut.add(next.getObject().toString());
+	        		i++;
+            	}
+            }
 	    	if(i % 100000 == 0) {
-	 	    	System.out.println(i);
+	    		if (i!=before){
+	 	    		System.out.println(i);
+	 	    	}
+	    		before=i;
 	    	}
         }
         System.out.println("Number resources: "+i);
@@ -229,7 +240,7 @@ public class Index {
 		//Use the octave instance to compute matrix multiplication
 		
 		
-		/*
+		
 		//Compute the shortest path of length maximal 3
 		octave.eval("load "+System.getProperty("user.dir")+"/index/matrixI1"+"; ");
 		octave.eval("I1 = spconvert(matrixI1); ");
@@ -266,11 +277,12 @@ public class Index {
 		octave.eval("clear D1;");
 		octave.eval("clear D2;");
 		octave.eval("clear D3;");
-		*/
+		
 		
 		
 		//Include relations
 		//Compute the shortest path of length maximal 3
+		/*
 		octave.eval("load "+System.getProperty("user.dir")+"/index/matrixI1"+"; ");
 		octave.eval("I1 = spconvert(matrixI1); ");
 		octave.eval("load "+System.getProperty("user.dir")+"/index/matrixR1"+"; ");
@@ -380,7 +392,7 @@ public class Index {
 		octave.eval("clear D4;");
 		octave.eval("clear D5;");
 		octave.eval("clear D6;");
-		
+		*/
 		
 	}
 }
