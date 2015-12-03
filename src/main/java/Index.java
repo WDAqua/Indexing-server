@@ -4,6 +4,8 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.ExecutorService;
@@ -125,15 +127,30 @@ public class Index {
         executor.submit(parser);
         Integer i=1;
         Integer before=0;
+        int r=1;
         System.out.println("Parse the dump and search for all subjects objects...");
         System.out.println("If this slows down, and does not come to an end, you probably need more RAM!");
         while (iter.hasNext()) {
             Triple next = iter.next();
+            if (next.getSubject().toString().contains("Berl%C3%ADn")){
+            	System.out.println(URLDecoder.decode(next.getSubject().toString(),"UTF-8"));
+            	System.out.println("found!!!");
+            }
+            /*
+            // Look if subject already encounterd
             if (mapIn.containsKey(next.getSubject().toString())==false){
             	mapIn.put(next.getSubject().toString(),i);
     	    	mapOut.add(next.getSubject().toString());
         		i++;
         	}
+            //Look if the relation was already encountered
+            if (mapInRelation.containsKey(next.getPredicate().toString())==false){
+        		//System.out.println(next.getPredicate());
+        		mapInRelation.put(next.getPredicate().toString(),r);
+        		mapOutRelation.add(next.getPredicate().toString());
+        		r++;
+        	}
+            //Look if object is an uri and was already encountered
             if (next.getObject().isURI()==true){ 
             	if (mapIn.containsKey(next.getObject().toString())==false){
 	            	mapIn.put(next.getObject().toString(),i);
@@ -147,37 +164,12 @@ public class Index {
 	 	    	}
 	    		before=i;
 	    	}
+	    	*/
         }
         System.out.println("Number resources: "+i);
+        System.out.println("Number relations: "+r);
         executor.shutdownNow();
         System.out.println("size mapIn: "+ mapIn.size());
-        
-        //Relation extraction
-        iter = new PipedRDFIterator<Triple>();
-        final PipedRDFStream<Triple> inputStream3 = new PipedTriplesStream(iter);
-        // PipedRDFStream and PipedRDFIterator need to be on different threads
-        executor = Executors.newSingleThreadExecutor();
-        parser = new Runnable() {
-            @Override
-            public void run() {
-                // Call the parsing process.
-            	RDFDataMgr.parse(inputStream3, dump);
-            }
-        };
-        executor.submit(parser);
-        
-        int r=1;
-        System.out.println("Search for relations in the dump ...");
-        while ( iter.hasNext()){
-        	Triple next = iter.next();
-        	if (mapInRelation.containsKey(next.getPredicate().toString())==false){
-        		//System.out.println(next.getPredicate());
-        		mapInRelation.put(next.getPredicate().toString(),r);
-        		mapOutRelation.add(next.getPredicate().toString());
-        		r++;
-        	}
-        }
-        executor.shutdown();
         
         iter = new PipedRDFIterator<Triple>();
         final PipedRDFStream<Triple> inputStream2 = new PipedTriplesStream(iter);
