@@ -132,11 +132,6 @@ public class Index {
         System.out.println("If this slows down, and does not come to an end, you probably need more RAM!");
         while (iter.hasNext()) {
             Triple next = iter.next();
-            if (next.getSubject().toString().contains("Berl%C3%ADn")){
-            	System.out.println(URLDecoder.decode(next.getSubject().toString(),"UTF-8"));
-            	System.out.println("found!!!");
-            }
-            /*
             // Look if subject already encounterd
             if (mapIn.containsKey(next.getSubject().toString())==false){
             	mapIn.put(next.getSubject().toString(),i);
@@ -164,7 +159,6 @@ public class Index {
 	 	    	}
 	    		before=i;
 	    	}
-	    	*/
         }
         System.out.println("Number resources: "+i);
         System.out.println("Number relations: "+r);
