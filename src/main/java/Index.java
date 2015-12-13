@@ -6,8 +6,17 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 //Java wrapper around octave
@@ -32,7 +41,7 @@ public class Index {
 	
 	String octavePath="/usr/local/bin/octave";
 	//String labels = "/Users/Dennis/Downloads/labels-en-uris_it.nt";
-	String dump = "/Users/Dennis/Downloads/dump-it.nt";
+	String dump = "/Users/Dennis/Downloads/dbpedia/dump.nt";
 	
 	
 	private HashMap<String,Integer> mapIn = new HashMap<String,Integer>();
@@ -41,17 +50,27 @@ public class Index {
 	private ArrayList<String> mapOutRelation = new ArrayList<String>();
 	private CompColMatrix matrixIndex;
 	private OctaveEngine octave;
+	private Statement st;
 
-	Index(){
+	Index() throws ClassNotFoundException, SQLException{
 		OctaveEngineFactory factory = new OctaveEngineFactory();
 		factory.setOctaveProgram(new File(octavePath));
 		octave = factory.getScriptEngine();
+		
+		String url = "jdbc:mysql://localhost:3306/Matrix";
+		String user = "root";
+		Class.forName("com.mysql.jdbc.Driver");
+		Connection con = DriverManager.getConnection(url, user,null);
+	    st = (Statement) con.createStatement();
 	}
 	
-	public OpenMapRealMatrix get(String[] URI) throws IllegalArgumentException{
+	public OpenMapRealMatrix get(String[] URI) throws IllegalArgumentException, SQLException{
+
 		String[] tmp= new String[URI.length];
 		int k=0;
+		long startTime1 = System.currentTimeMillis();
 		long startTime = System.currentTimeMillis();
+		
 		for (String uri : URI){
 			//System.out.println(uri);
 			if (mapIn.containsKey(uri)){
@@ -66,8 +85,48 @@ public class Index {
 			k++;
 		}
 		String indeces = String.join(", ", tmp);
-		//System.out.println(indeces);
+		System.out.println(indeces);
 		
+		long estimatedTime = System.currentTimeMillis() - startTime;
+		System.out.println("Hash: "+estimatedTime);
+		startTime = System.currentTimeMillis();
+		
+		OpenMapRealMatrix B = new  OpenMapRealMatrix(URI.length,URI.length);
+		
+		String sql="SELECT R,C,V FROM Matrix.matrix2 "
+				+"where R in ( "+ indeces +") && C in ("+indeces+");";
+		ResultSet rs = st.executeQuery(sql);
+		
+		estimatedTime = System.currentTimeMillis() - startTime;
+		System.out.println("Retrive: "+estimatedTime);
+		startTime = System.currentTimeMillis();
+		
+		while(rs.next()){
+	         //Retrieve by column name
+	    	 Integer row  = rs.getInt("R");
+	         Integer column = rs.getInt("C");
+	         int value = rs.getInt("V");
+	         System.out.println(row+", "+ column+", "+ value);
+	         
+	         int i=0;
+	         while (tmp[i].equals(row.toString())==false){
+	        	 i++;
+	         }
+	         int j=0;
+	         while (tmp[j].equals(column.toString())==false){
+	        	 j++;
+	         }
+	         B.setEntry(i, j, value);
+	      }
+	      rs.close();
+	      estimatedTime = System.currentTimeMillis() - startTime;
+		  System.out.println("Translate: "+estimatedTime);
+		  System.out.println("Total: "+ (System.currentTimeMillis() - startTime1));
+	      return B;
+		
+	     
+	      
+		/*
         //Selects the submatrix containing the rows and columns contained in indeces
         //String func="ans=full(B(["+indeces+" ] , [ "+indeces+"]))";
         startTime = System.currentTimeMillis();
@@ -92,6 +151,8 @@ public class Index {
         }
         //System.out.println(A.toString());
         return B;
+        */
+        
 	}
 	
 	
@@ -104,7 +165,10 @@ public class Index {
 		return (String)mapOut.get(i);
 	}
 	
-	public void index() throws IOException, ClassNotFoundException{
+	public void index() throws IOException, ClassNotFoundException, SQLException{
+		long startTime = System.currentTimeMillis();
+		
+		
 		//create the index folder
 		File folder = new File("index/");
 		if (!folder.exists()) folder.mkdir();
@@ -184,7 +248,7 @@ public class Index {
 		FileOutputStream matrixR2 = new FileOutputStream(System.getProperty("user.dir")+"/index/matrixR2");
 		PrintStream printStreamR2 = new PrintStream(matrixR2);
 		int j=0;
-		
+		/*
 		System.out.println("Parsing the dump ...");
 		while ( iter.hasNext()){
 			Triple next = iter.next();
@@ -221,12 +285,14 @@ public class Index {
 		printStreamR2.close();
 		executor.shutdown();
 		
+		long estimatedTime = System.currentTimeMillis() - startTime;
+		System.out.println("Dictionary created in "+estimatedTime+" ms");
 		System.out.println("Number triples: " + j);
 		System.out.println("The shortest paths are computed ... ");
+		startTime= System.currentTimeMillis();
+		
+		
 		//Use the octave instance to compute matrix multiplication
-		
-		
-		
 		//Compute the shortest path of length maximal 3
 		octave.eval("load "+System.getProperty("user.dir")+"/index/matrixI1"+"; ");
 		octave.eval("I1 = spconvert(matrixI1); ");
@@ -263,12 +329,12 @@ public class Index {
 		octave.eval("clear D1;");
 		octave.eval("clear D2;");
 		octave.eval("clear D3;");
+		*/
 		
-		
-		
+		/*
 		//Include relations
 		//Compute the shortest path of length maximal 3
-		/*
+		
 		octave.eval("load "+System.getProperty("user.dir")+"/index/matrixI1"+"; ");
 		octave.eval("I1 = spconvert(matrixI1); ");
 		octave.eval("load "+System.getProperty("user.dir")+"/index/matrixR1"+"; ");
@@ -324,8 +390,8 @@ public class Index {
 		octave.eval("A6down=[sparse(r,i) R2*I3*R1];");
 		octave.eval("A6=[A6up ; A6down];");
 		
-		octave.eval("clear A5up;");
-		octave.eval("clear A5down;");
+		octave.eval("clear A6up;");
+		octave.eval("clear A6down;");
 		octave.eval("clear I3;");
 		
 		
@@ -378,7 +444,39 @@ public class Index {
 		octave.eval("clear D4;");
 		octave.eval("clear D5;");
 		octave.eval("clear D6;");
-		*/
 		
+		
+		
+		
+		octave.eval("[i,j,val] = find(B);");
+		octave.eval("data_dump = [i,j,val];");
+		octave.eval("C = [i';j';val'];");
+		octave.eval("fid = fopen(\'"+System.getProperty("user.dir")+"/index/export"+"\',\'w\');");
+		octave.eval("fprintf( fid,\'%d %d %d\\n', C );");
+		
+		
+		
+		
+		String sql="CREATE TABLE IF NOT EXISTS `Matrix`.`MATRIX2` ( "
+				+ "`ID` INT NOT NULL  AUTO_INCREMENT, "
+				+ "`R` INT NULL, "
+				+ " `C` INT NULL, "
+				+ "`V` INT NULL, "
+				+ "PRIMARY KEY (`ID`)); ";
+		st.executeUpdate(sql);
+		sql="TRUNCATE TABLE `Matrix`.`MATRIX2`; ";
+		st.executeUpdate(sql);
+	    sql="LOAD DATA INFILE '"+System.getProperty("user.dir")+"/index/export"+"'"
+	    		+ "INTO TABLE `Matrix`.`MATRIX2` "
+	    		+ "FIELDS TERMINATED BY ' ' ENCLOSED BY '' ESCAPED BY '' "
+	    		+ "(R,C,V);";
+	    st.executeUpdate(sql);
+	    
+	    sql="ALTER TABLE `Matrix`.`MATRIX2` " 
+	    		+ "ADD UNIQUE INDEX `INDEX1` (`R` ASC, `C` ASC);";	    
+	    st.executeUpdate(sql);
+	    */
+		long estimatedTime = System.currentTimeMillis() - startTime;
+		System.out.println("Computed in "+ estimatedTime);
 	}
 }
