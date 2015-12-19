@@ -31,8 +31,7 @@ public class Index {
 	
 	
 	String octavePath="/usr/local/bin/octave";
-	//String labels = "/Users/Dennis/Downloads/labels-en-uris_it.nt";
-	String dump = "/Users/Dennis/Downloads/dump-it.nt";
+	String dump = "/Users/Dennis/Downloads/dump/dump.nt";
 	
 	
 	private HashMap<String,Integer> mapIn = new HashMap<String,Integer>();
@@ -53,44 +52,35 @@ public class Index {
 		int k=0;
 		long startTime = System.currentTimeMillis();
 		for (String uri : URI){
-			//System.out.println(uri);
 			if (mapIn.containsKey(uri)){
 				tmp[k] = mapIn.get(uri).toString();
 			} else if (mapInRelation.containsKey(uri)){
-				//System.out.println("size mapIn: "+ mapIn.size());
 				tmp[k] = ((Integer)(mapIn.size()+1+mapInRelation.get(uri))).toString();
-				//System.out.println("mapInRelation index: "+ mapInRelation.get(uri));
 			} else {
 				throw new IllegalArgumentException("The URI "+ uri +" is not in the index!");
 			}
 			k++;
 		}
 		String indeces = String.join(", ", tmp);
-		//System.out.println(indeces);
 		
         //Selects the submatrix containing the rows and columns contained in indeces
-        //String func="ans=full(B(["+indeces+" ] , [ "+indeces+"]))";
         startTime = System.currentTimeMillis();
-        octave.eval("C = full(B(["+indeces+" ] , [ "+indeces+"]));");
+        octave.eval("C = full(B(["+indeces+" ] , [ "+indeces+"]))");
         long estimatedTime = System.currentTimeMillis() - startTime;
         System.out.println("eval: "+estimatedTime);
         OctaveDouble ans = octave.get(OctaveDouble.class, "C");
         double[] a = ans.getData();
         estimatedTime = System.currentTimeMillis() - startTime;
         System.out.println("Retrive: "+estimatedTime);
-        //int[][] A=new int[URI.length][URI.length];
         OpenMapRealMatrix B = new  OpenMapRealMatrix(URI.length,URI.length);
         System.out.println("Length"+URI.length);
         for (int i=0; i<URI.length; i++){
                 for (int j=0; j<URI.length; j++){
-                        //A[i][j]=(int)a[j+URI.length*i];
                         if (a[i+URI.length*j]!=0){
                                 B.setEntry(i, j, a[i+URI.length*j]);
                         }
-                        //System.out.println(A[i][j]);
                 }
         }
-        //System.out.println(A.toString());
         return B;
 	}
 	
@@ -105,6 +95,7 @@ public class Index {
 	}
 	
 	public void index() throws IOException, ClassNotFoundException{
+		org.apache.log4j.Logger.getRootLogger().setLevel(org.apache.log4j.Level.OFF);
 		//create the index folder
 		File folder = new File("index/");
 		if (!folder.exists()) folder.mkdir();
@@ -128,7 +119,7 @@ public class Index {
         Integer i=1;
         Integer before=0;
         int r=1;
-        System.out.println("Parse the dump and search for all subjects objects...");
+        System.out.println("Parse the dump and search for all subjects objects and relations ...");
         System.out.println("If this slows down, and does not come to an end, you probably need more RAM!");
         while (iter.hasNext()) {
             Triple next = iter.next();
@@ -163,7 +154,6 @@ public class Index {
         System.out.println("Number resources: "+i);
         System.out.println("Number relations: "+r);
         executor.shutdownNow();
-        System.out.println("size mapIn: "+ mapIn.size());
         
         iter = new PipedRDFIterator<Triple>();
         final PipedRDFStream<Triple> inputStream2 = new PipedTriplesStream(iter);
@@ -192,8 +182,6 @@ public class Index {
 				Object s = mapIn.get(next.getSubject().toString());
 				Object p = mapInRelation.get(next.getPredicate().toString()); 
 				Object o = mapIn.get(next.getObject().toString());
-				//System.out.println(next.getSubject().toString()+next.getPredicate().toString()+next.getObject().toString());
-				//System.out.println(s.toString()+p.toString()+o.toString());
 				if (s!=null){
 					if (s!=null && o!=null){
 						printStreamI.print(s + " " + o + " 1\n");
@@ -223,9 +211,9 @@ public class Index {
 		
 		System.out.println("Number triples: " + j);
 		System.out.println("The shortest paths are computed ... ");
+		
+		
 		//Use the octave instance to compute matrix multiplication
-		
-		
 		
 		//Compute the shortest path of length maximal 3
 		octave.eval("load "+System.getProperty("user.dir")+"/index/matrixI1"+"; ");
@@ -379,6 +367,15 @@ public class Index {
 		octave.eval("clear D5;");
 		octave.eval("clear D6;");
 		*/
+		
+		//To print out the matrix in DOK format uncomment this lines
+		/*
+		octave.eval("[i,j,val] = find(B);");
+		octave.eval("data_dump = [i,j,val];");
+		octave.eval("C = [i';j';val'];");
+		octave.eval("fid = fopen(\'"+System.getProperty("user.dir")+"/index/export"+"\',\'w\');");
+		octave.eval("fprintf( fid,\'%d %d %d\\n', C );");
+		 */
 		
 	}
 }

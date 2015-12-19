@@ -15,7 +15,7 @@ public class Server2 {
         	System.out.println("Indexing starts ...");
         	Index i = new Index();
         	i.index();
-        	System.out.println("\n\nIndexing finished!");
+        	System.out.println("\nIndexing finished!");
         	System.out.println("I'm ready!");
         	
             ServerSocket serverSocket = new ServerSocket(1112);
