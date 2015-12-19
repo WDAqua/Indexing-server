@@ -20,3 +20,6 @@ to the corresponding directories. For octave you can find it out with „which o
 <br />
 The corresponing client can be found under: <br />
 https://github.com/WDAqua/Indexing-client <br />
+
+If you want to include in the distance computations you can uncomment the corresponding part in the src/main/java/Index.class file and comment the preivious part for computing the distacne only for the instances. <br />
+If you want to output the computations in a file you can uncomment the last comment in the src/main/java/Index.class file.
