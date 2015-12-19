@@ -1,5 +1,4 @@
 import java.net.*;
-import java.sql.SQLException;
 
 import org.apache.commons.math3.linear.OpenMapRealMatrix;
 
@@ -9,7 +8,7 @@ import java.io.*;
  
 public class Server2 {
 	private static boolean acceptMore = true;
-    public static void main(String[] args) throws IOException, ClassNotFoundException, SQLException {
+    public static void main(String[] args) throws IOException, ClassNotFoundException {
     	
     	try {
         	System.out.println("Server started!");
