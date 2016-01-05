@@ -31,7 +31,7 @@ public class Index {
 	
 	
 	String octavePath="/usr/local/bin/octave";
-	String dump = "/Users/Dennis/Downloads/dump/dump.nt";
+	String dump = "/Users/Dennis/Downloads/dump/dump-P.nt";
 	
 	
 	private HashMap<String,Integer> mapIn = new HashMap<String,Integer>();
@@ -61,27 +61,67 @@ public class Index {
 			}
 			k++;
 		}
-		String indeces = String.join(", ", tmp);
 		
-        //Selects the submatrix containing the rows and columns contained in indeces
-        startTime = System.currentTimeMillis();
-        octave.eval("C = full(B(["+indeces+" ] , [ "+indeces+"]))");
-        long estimatedTime = System.currentTimeMillis() - startTime;
-        System.out.println("eval: "+estimatedTime);
-        OctaveDouble ans = octave.get(OctaveDouble.class, "C");
-        double[] a = ans.getData();
-        estimatedTime = System.currentTimeMillis() - startTime;
-        System.out.println("Retrive: "+estimatedTime);
-        OpenMapRealMatrix B = new  OpenMapRealMatrix(URI.length,URI.length);
-        System.out.println("Length"+URI.length);
-        for (int i=0; i<URI.length; i++){
-                for (int j=0; j<URI.length; j++){
-                        if (a[i+URI.length*j]!=0){
-                                B.setEntry(i, j, a[i+URI.length*j]);
-                        }
-                }
-        }
-        return B;
+		if (tmp.length<10){
+			octave.eval("tic; w=zeros("+tmp.length*tmp.length+",1); toc;");
+			String eval="tic; ";
+			k=1;
+			for (int i=0; i<tmp.length; i++){
+				for (int j=0; j<tmp.length; j++){
+					eval+=" w("+k+")=B(["+tmp[i]+"],["+tmp[j]+"]); ";
+					k++;
+				}
+			}
+			eval+=" toc;";
+			startTime = System.currentTimeMillis();
+			octave.eval(eval);
+			long estimatedTime = System.currentTimeMillis() - startTime;
+	        System.out.println("eval: "+estimatedTime);
+	        
+	        
+	        startTime = System.currentTimeMillis();
+			OctaveDouble ans = octave.get(OctaveDouble.class, "w");
+		    double[] a = ans.getData();
+			estimatedTime = System.currentTimeMillis() - startTime;
+	        System.out.println("retrive: "+estimatedTime);
+	        
+	        startTime = System.currentTimeMillis();
+	        OpenMapRealMatrix B = new  OpenMapRealMatrix(URI.length,URI.length);
+	        System.out.println("Length"+URI.length);
+	        for (int i=0; i<URI.length; i++){
+	                for (int j=0; j<URI.length; j++){
+	                        if (a[i+URI.length*j]!=0){
+	                                B.setEntry(i, j, a[i+URI.length*j]);
+	                        }
+	                }
+	        }
+	        estimatedTime = System.currentTimeMillis() - startTime;
+	        System.out.println("copy: "+estimatedTime);
+	        return B;
+		} else {
+        
+		
+			String indeces = String.join(", ", tmp);
+	        //Selects the submatrix containing the rows and columns contained in indeces
+	        startTime = System.currentTimeMillis();
+	        octave.eval("tic; C = full(B(["+indeces+" ] , [ "+indeces+"])); toc; ");
+	        //estimatedTime = System.currentTimeMillis() - startTime;
+	        //System.out.println("eval: "+estimatedTime);
+	        OctaveDouble ans2 = octave.get(OctaveDouble.class, "C");
+	        double[] a2 = ans2.getData();
+	        //estimatedTime = System.currentTimeMillis() - startTime;
+	        //System.out.println("Retrive: "+estimatedTime);
+	        OpenMapRealMatrix B2 = new  OpenMapRealMatrix(URI.length,URI.length);
+	        System.out.println("Length"+URI.length);
+	        for (int i=0; i<URI.length; i++){
+	                for (int j=0; j<URI.length; j++){
+	                        if (a2[i+URI.length*j]!=0){
+	                                B2.setEntry(i, j, a2[i+URI.length*j]);
+	                        }
+	                }
+	        }
+	        return B2;
+		}
 	}
 	
 	
