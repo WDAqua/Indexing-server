@@ -214,7 +214,7 @@ public class Index {
 		
 		
 		//Use the octave instance to compute matrix multiplication
-		
+		/*
 		//Compute the shortest path of length maximal 3
 		octave.eval("load "+System.getProperty("user.dir")+"/index/matrixI1"+"; ");
 		octave.eval("I1 = spconvert(matrixI1); ");
@@ -251,7 +251,7 @@ public class Index {
 		octave.eval("clear D1;");
 		octave.eval("clear D2;");
 		octave.eval("clear D3;");
-		
+		*/
 		
 		
 		//Include relations
@@ -367,6 +367,46 @@ public class Index {
 		octave.eval("clear D5;");
 		octave.eval("clear D6;");
 		*/
+		
+		//Compute cosine similarity between all normalized vectors
+		octave.eval("load "+System.getProperty("user.dir")+"/index/matrixI1"+"; ");
+		octave.eval("I1 = spconvert(matrixI1); ");
+		
+		octave.eval("I2=I1*I1;");
+		octave.eval("I3=I2*I1;");
+		
+		octave.eval("B1=spones(I1);");
+		octave.eval("B2=spones(I2);");
+		octave.eval("B3=spones(I3);");
+		
+		octave.eval("clear I1;");
+		octave.eval("clear I2;");
+		octave.eval("clear I3;");
+		
+		octave.eval("C1=B1;");
+		octave.eval("C2=B2-B1;");
+		octave.eval("C3=B3-B2-B1;");
+		
+		octave.eval("clear B1;");
+		octave.eval("clear B2;");
+		octave.eval("clear B3;");
+		
+		octave.eval("D1=C1;");
+		octave.eval("D2=spfun(@(x)x.*(x>=0),C2);");
+		octave.eval("D3=spfun(@(x)x.*(x>=0),C3);");
+		
+		octave.eval("clear C1;");
+		octave.eval("clear C2;");
+		octave.eval("clear C3;");
+		
+		octave.eval("B=D1+0.5*D2+0.3*D3;");
+		
+		octave.eval("clear D1;");
+		octave.eval("clear D2;");
+		octave.eval("clear D3;");
+		
+		octave.eval("B=B*spdiags(spfun(@(x) 1./x,(sqrt(sum(B.^2,1))))',0,rows(B),rows(B)); toc;");
+		octave.eval("B=B'*B;");
 		
 		//To print out the matrix in DOK format uncomment this lines
 		/*
