@@ -53,19 +53,22 @@ public class Index {
 		long startTime = System.currentTimeMillis();
 		for (String uri : URI){
 			if (mapIn.containsKey(uri)){
-				tmp[k] = mapIn.get(uri).toString();
+				tmp[k] = " B(:,"+mapIn.get(uri).toString()+") ";
 			} else if (mapInRelation.containsKey(uri)){
-				tmp[k] = ((Integer)(mapIn.size()+1+mapInRelation.get(uri))).toString();
+				tmp[k] = " B(:,"+((Integer)(mapIn.size()+1+mapInRelation.get(uri))).toString()+") ";
 			} else {
 				throw new IllegalArgumentException("The URI "+ uri +" is not in the index!");
 			}
 			k++;
 		}
-		String indeces = String.join(", ", tmp);
+		String indeces = String.join(" ", tmp);
 		
         //Selects the submatrix containing the rows and columns contained in indeces
         startTime = System.currentTimeMillis();
-        octave.eval("C = full(B(["+indeces+" ] , [ "+indeces+"]))");
+        //octave.eval("C = full(B(["+indeces+" ] , [ "+indeces+"]))");
+        System.out.println(tmp+"\n");
+        octave.eval("T=["+indeces+"]");
+        octave.eval("C = full(T'*T);");
         long estimatedTime = System.currentTimeMillis() - startTime;
         System.out.println("eval: "+estimatedTime);
         OctaveDouble ans = octave.get(OctaveDouble.class, "C");
@@ -405,8 +408,8 @@ public class Index {
 		octave.eval("clear D2;");
 		octave.eval("clear D3;");
 		
-		octave.eval("B=B*spdiags(spfun(@(x) 1./x,(sqrt(sum(B.^2,1))))',0,rows(B),rows(B)); toc;");
-		octave.eval("B=B'*B;");
+		octave.eval("B=B*spdiags(spfun(@(x) 1./x,(sqrt(sum(B.^2,1))))',0,rows(B),rows(B));");
+		//octave.eval("B=B'*B;");
 		
 		//To print out the matrix in DOK format uncomment this lines
 		/*
