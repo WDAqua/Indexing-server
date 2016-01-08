@@ -1,5 +1,5 @@
 # Indexing-server
-How to use this libaray?
+How to use this libray?
 
 1- Download the dump of the ontology you want. For example download the dbpedia dumps: <br />
   wget http://downloads.dbpedia.org/2015-04/core-i18n/en/labels_en.nt.bz2 <br />
@@ -15,7 +15,7 @@ How to use this libaray?
        String dump = "/ssd/dennis/dump-it.nt“; <br />
 <br />
 to the corresponding directories. For octave you can find it out with „which octave“ on CL. <br />
-5- Do „mvn package“ to compile. (NOTE: you need java 8 due to dependencies to Jena) <br />
+5- Do „mvn clean package“ to compile. (NOTE: you need java 8 due to dependencies to Jena) <br />
 6- Now you can run the server with „java -jar „ on the corresponding jar in the target folder. <br />
 <br />
 The corresponing client can be found under: <br />
