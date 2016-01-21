@@ -30,8 +30,8 @@ import org.apache.log4j.BasicConfigurator;
 public class Index {
 	
 	
-	String octavePath="/usr/local/bin/octave";
-	String dump = "/Users/Dennis/Downloads/dump/dump.nt";
+	String octavePath="/usr/bin/octave";
+	String dump = "/home_expes/dd77474h/dump-en-P.nt";
 	
 	
 	private HashMap<String,Integer> mapIn = new HashMap<String,Integer>();
@@ -57,7 +57,8 @@ public class Index {
 			} else if (mapInRelation.containsKey(uri)){
 				tmp[k] = ((Integer)(mapIn.size()+1+mapInRelation.get(uri))).toString();
 			} else {
-				throw new IllegalArgumentException("The URI "+ uri +" is not in the index!");
+				tmp[k]="1";
+				//throw new IllegalArgumentException("The URI "+ uri +" is not in the index!");
 			}
 			k++;
 		}
@@ -184,9 +185,18 @@ public class Index {
 				Object o = mapIn.get(next.getObject().toString());
 				if (s!=null){
 					if (s!=null && o!=null){
-						printStreamI.print(s + " " + o + " 1\n");
-						printStreamR1.print(s + " " + p + " 1\n");
-						printStreamR2.print(p + " " + o + " 1\n");
+						if (next.getPredicate().toString().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")){
+							printStreamI.print(o + " " + s + " 1\n");
+                                                        printStreamR1.print(o + " " + p + " 1\n");
+                                                        printStreamR2.print(p + " " + s + " 1\n");
+							//printStreamI.print(s + " " + o + " 1\n");
+                                                        //printStreamR1.print(s + " " + p + " 1\n");
+                                                        //printStreamR2.print(p + " " + o + " 1\n");
+						} else {
+							printStreamI.print(s + " " + o + " 1\n");
+							printStreamR1.print(s + " " + p + " 1\n");
+							printStreamR2.print(p + " " + o + " 1\n");
+						}
 						j++;
 					} else {
 						printStreamR1.print(s + " " + p + " 1\n");
@@ -214,7 +224,7 @@ public class Index {
 		
 		
 		//Use the octave instance to compute matrix multiplication
-		
+		/*	
 		//Compute the shortest path of length maximal 3
 		octave.eval("load "+System.getProperty("user.dir")+"/index/matrixI1"+"; ");
 		octave.eval("I1 = spconvert(matrixI1); ");
@@ -251,12 +261,12 @@ public class Index {
 		octave.eval("clear D1;");
 		octave.eval("clear D2;");
 		octave.eval("clear D3;");
-		
+		*/
 		
 		
 		//Include relations
 		//Compute the shortest path of length maximal 3
-		/*
+		
 		octave.eval("load "+System.getProperty("user.dir")+"/index/matrixI1"+"; ");
 		octave.eval("I1 = spconvert(matrixI1); ");
 		octave.eval("load "+System.getProperty("user.dir")+"/index/matrixR1"+"; ");
@@ -268,12 +278,13 @@ public class Index {
 		octave.eval("r=size(R1,2);");
 		
 		octave.eval("I2=I1*I1;");
-		octave.eval("I3=I2*I1;");
+		//octave.eval("I3=I2*I1;");
 		
+		System.out.println("Here 1");		
+	
 		octave.eval("A1up=[sparse(i,i) R1];");
 		octave.eval("A1down=[R2, sparse(r,r)];");
 		octave.eval("A1=[A1up ; A1down];");
-		
 		
 		octave.eval("clear A1up;");
 		octave.eval("clear A1down;");
@@ -300,21 +311,23 @@ public class Index {
 		octave.eval("clear A4up;");
 		octave.eval("clear A4down;");
 		
-		octave.eval("A5up=[sparse(i,i) I2*R1];");
-		octave.eval("A5down=[R2*I2, sparse(r,r)];");
-		octave.eval("A5=[A5up ; A5down];");
+		//octave.eval("A5up=[sparse(i,i) I2*R1];");
+		//octave.eval("A5down=[R2*I2, sparse(r,r)];");
+		//octave.eval("A5=[A5up ; A5down];");
 		
-		octave.eval("clear A5up;");
-		octave.eval("clear A5down;");
+		//octave.eval("clear A5up;");
+		//octave.eval("clear A5down;");
 		octave.eval("clear I2;");
 		
-		octave.eval("A6up=[I3 sparse(i,r)];");
-		octave.eval("A6down=[sparse(r,i) R2*I3*R1];");
-		octave.eval("A6=[A6up ; A6down];");
+		System.out.println("Here 2");
+
+		//octave.eval("A6up=[I3 sparse(i,r)];");
+		//octave.eval("A6down=[sparse(r,i) R2*I3*R1];");
+		//octave.eval("A6=[A6up ; A6down];");
 		
 		octave.eval("clear A5up;");
 		octave.eval("clear A5down;");
-		octave.eval("clear I3;");
+		//octave.eval("clear I3;");
 		
 		
 		octave.eval("B1=spones(A1);");
@@ -325,48 +338,51 @@ public class Index {
 		octave.eval("clear A3;");
 		octave.eval("B4=spones(A4);");
 		octave.eval("clear A4;");
-		octave.eval("B5=spones(A5);");
-		octave.eval("clear A5;");
-		octave.eval("B6=spones(A6);");
-		octave.eval("clear A6;");
+		//octave.eval("B5=spones(A5);");
+		//octave.eval("clear A5;");
+		//octave.eval("B6=spones(A6);");
+		//octave.eval("clear A6;");
 		
 		octave.eval("C1=B1;");
 		octave.eval("C2=B2;");
 		octave.eval("C3=B3-B1;");
 		octave.eval("C4=B4-B2;");
-		octave.eval("C5=B5-B3-B1;");
-		octave.eval("C6=B6-B4-B2;");
+		//octave.eval("C5=B5-B3-B1;");
+		//octave.eval("C6=B6-B4-B2;");
 		
 		octave.eval("clear B1;");
 		octave.eval("clear B2;");
 		octave.eval("clear B3;");
 		octave.eval("clear B4;");
-		octave.eval("clear B5;");
-		octave.eval("clear B6;");
+		//octave.eval("clear B5;");
+		//octave.eval("clear B6;");
 		
+		System.out.println("Here 3");
+
 		octave.eval("D1=C1;");
 		octave.eval("D2=C2;");
 		octave.eval("D3=spfun(@(x)x.*(x>=0),C3);");
 		octave.eval("D4=spfun(@(x)x.*(x>=0),C4);");
-		octave.eval("D5=spfun(@(x)x.*(x>=0),C5);");
-		octave.eval("D6=spfun(@(x)x.*(x>=0),C6);");
+		//octave.eval("D5=spfun(@(x)x.*(x>=0),C5);");
+		//octave.eval("D6=spfun(@(x)x.*(x>=0),C6);");
 		
 		octave.eval("clear C1;");
 		octave.eval("clear C2;");
 		octave.eval("clear C3;");
 		octave.eval("clear C4;");
-		octave.eval("clear C5;");
-		octave.eval("clear C6;");
+		//octave.eval("clear C5;");
+		//octave.eval("clear C6;");
 		
-		octave.eval("B=D1+2*D2+3*D3+4*D4+5*D5+6*D6;");
+		//octave.eval("B=D1+2*D2+3*D3+4*D4+5*D5+6*D6;");
+		octave.eval("B=D1+2*D2+3*D3+4*D4;");
 		
 		octave.eval("clear D1;");
 		octave.eval("clear D2;");
 		octave.eval("clear D3;");
 		octave.eval("clear D4;");
-		octave.eval("clear D5;");
-		octave.eval("clear D6;");
-		*/
+		//octave.eval("clear D5;");
+		//octave.eval("clear D6;");
+		
 		
 		//To print out the matrix in DOK format uncomment this lines
 		/*
