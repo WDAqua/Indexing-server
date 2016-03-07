@@ -30,8 +30,8 @@ import org.apache.log4j.BasicConfigurator;
 public class Index {
 	
 	
-	String octavePath="/usr/local/bin/octave";
-	String dump = "/Users/Dennis/Downloads/dump/dump.nt";
+	String octavePath="/usr/bin/octave";
+	String dump = "/home_expes/dd77474h/dump.nt";
 	
 	
 	private HashMap<String,Integer> mapIn = new HashMap<String,Integer>();
@@ -53,11 +53,13 @@ public class Index {
 		long startTime = System.currentTimeMillis();
 		for (String uri : URI){
 			if (mapIn.containsKey(uri)){
-				tmp[k] = " B(:,"+mapIn.get(uri).toString()+") ";
+				Integer i=mapIn.get(uri)+1;
+				tmp[k] = " B(:,"+i+") ";
 			} else if (mapInRelation.containsKey(uri)){
 				tmp[k] = " B(:,"+((Integer)(mapIn.size()+1+mapInRelation.get(uri))).toString()+") ";
 			} else {
-				throw new IllegalArgumentException("The URI "+ uri +" is not in the index!");
+				tmp[k] = " B(:,1) ";
+				//throw new IllegalArgumentException("The URI "+ uri +" is not in the index!");
 			}
 			k++;
 		}
@@ -119,7 +121,7 @@ public class Index {
 
         // Start the parser on another thread
         executor.submit(parser);
-        Integer i=1;
+        Integer i=2;
         Integer before=0;
         int r=1;
         System.out.println("Parse the dump and search for all subjects objects and relations ...");
@@ -376,37 +378,38 @@ public class Index {
 		octave.eval("I1 = spconvert(matrixI1); ");
 		
 		octave.eval("I2=I1*I1;");
-		octave.eval("I3=I2*I1;");
+		//octave.eval("I3=I2*I1;");
 		
 		octave.eval("B1=spones(I1);");
 		octave.eval("B2=spones(I2);");
-		octave.eval("B3=spones(I3);");
+		//octave.eval("B3=spones(I3);");
 		
 		octave.eval("clear I1;");
 		octave.eval("clear I2;");
-		octave.eval("clear I3;");
+		//octave.eval("clear I3;");
 		
 		octave.eval("C1=B1;");
 		octave.eval("C2=B2-B1;");
-		octave.eval("C3=B3-B2-B1;");
+		//octave.eval("C3=B3-B2-B1;");
 		
 		octave.eval("clear B1;");
 		octave.eval("clear B2;");
-		octave.eval("clear B3;");
+		//octave.eval("clear B3;");
 		
 		octave.eval("D1=C1;");
 		octave.eval("D2=spfun(@(x)x.*(x>=0),C2);");
-		octave.eval("D3=spfun(@(x)x.*(x>=0),C3);");
+		//octave.eval("D3=spfun(@(x)x.*(x>=0),C3);");
 		
 		octave.eval("clear C1;");
 		octave.eval("clear C2;");
-		octave.eval("clear C3;");
+		//octave.eval("clear C3;");
 		
-		octave.eval("B=D1+0.5*D2+0.3*D3;");
-		
+		//octave.eval("B=D1+0.5*D2+0.3*D3;");
+		octave.eval("B=D1+0.5*D2;");		
+
 		octave.eval("clear D1;");
 		octave.eval("clear D2;");
-		octave.eval("clear D3;");
+		//octave.eval("clear D3;");
 		
 		octave.eval("B=B*spdiags(spfun(@(x) 1./x,(sqrt(sum(B.^2,1))))',0,rows(B),rows(B));");
 		//octave.eval("B=B'*B;");
