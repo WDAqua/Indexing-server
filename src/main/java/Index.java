@@ -31,7 +31,7 @@ public class Index {
 	
 	
 	String octavePath="/usr/bin/octave";
-	String dump = "/home_expes/dd77474h/dump-en-P.nt";
+	String dump = "/home_expes/dd77474h/dump-t.nt";
 	
 	
 	private HashMap<String,Integer> mapIn = new HashMap<String,Integer>();
@@ -186,12 +186,12 @@ public class Index {
 				if (s!=null){
 					if (s!=null && o!=null){
 						if (next.getPredicate().toString().equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")){
-							printStreamI.print(o + " " + s + " 1\n");
-                                                        printStreamR1.print(o + " " + p + " 1\n");
-                                                        printStreamR2.print(p + " " + s + " 1\n");
-							//printStreamI.print(s + " " + o + " 1\n");
-                                                        //printStreamR1.print(s + " " + p + " 1\n");
-                                                        //printStreamR2.print(p + " " + o + " 1\n");
+							//printStreamI.print(o + " " + s + " 1\n");
+                                                        //printStreamR1.print(o + " " + p + " 1\n");
+                                                        //printStreamR2.print(p + " " + s + " 1\n");
+							printStreamI.print(s + " " + o + " 1\n");
+                                                        printStreamR1.print(s + " " + p + " 1\n");
+                                                        printStreamR2.print(p + " " + o + " 1\n");
 						} else {
 							printStreamI.print(s + " " + o + " 1\n");
 							printStreamR1.print(s + " " + p + " 1\n");
