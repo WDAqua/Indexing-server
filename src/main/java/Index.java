@@ -26,13 +26,14 @@ import org.apache.jena.riot.lang.PipedRDFIterator;
 import org.apache.jena.riot.lang.PipedRDFStream;
 import org.apache.jena.riot.lang.PipedTriplesStream;
 import org.apache.log4j.BasicConfigurator;
+import java.io.FileNotFoundException;
 
 public class Index {
 	
 	
 	String octavePath="/usr/bin/octave";
-	String dump = "/home_expes/dd77474h/dump-t.nt";
-	
+	String dump = "/home_expes/dd77474h/dump-en-P.nt";
+	//String dump = "/home_expes/dd77474h/dbpedia_2015-04.nt";
 	
 	private HashMap<String,Integer> mapIn = new HashMap<String,Integer>();
 	private ArrayList<String> mapOut = new ArrayList<String>();
@@ -40,6 +41,8 @@ public class Index {
 	private ArrayList<String> mapOutRelation = new ArrayList<String>();
 	private CompColMatrix matrixIndex;
 	private OctaveEngine octave;
+	private int rowI;
+	private int rowR;
 
 	Index(){
 		OctaveEngineFactory factory = new OctaveEngineFactory();
@@ -47,32 +50,205 @@ public class Index {
 		octave = factory.getScriptEngine();
 	}
 	
-	public OpenMapRealMatrix get(String[] URI) throws IllegalArgumentException{
+	public OpenMapRealMatrix get(String[] URI) throws FileNotFoundException, IllegalArgumentException{
 		String[] tmp= new String[URI.length];
-		int k=0;
-		long startTime = System.currentTimeMillis();
-		for (String uri : URI){
-			if (mapIn.containsKey(uri)){
-				tmp[k] = mapIn.get(uri).toString();
-			} else if (mapInRelation.containsKey(uri)){
-				tmp[k] = ((Integer)(mapIn.size()+1+mapInRelation.get(uri))).toString();
+	
+		FileOutputStream requestS1 = new FileOutputStream(System.getProperty("user.dir")+"/index/requestS1");
+		PrintStream printRequestS1 = new PrintStream(requestS1);
+		
+		FileOutputStream requestS2 = new FileOutputStream(System.getProperty("user.dir")+"/index/requestS2");
+		PrintStream printRequestS2 = new PrintStream(requestS2);
+	
+		int s1=0;
+		int s2=0;	
+		for (int i=0; i<URI.length; i++){
+			if (mapIn.containsKey(URI[i])){
+				tmp[i] = mapIn.get(URI[i]).toString();
+				printRequestS1.print(tmp[i] + " " + (s1+1) + " 1\n");
+				s1++;
+				System.out.println("I: "+i);
+			} else if (mapInRelation.containsKey(URI[i])){
+				tmp[i] = ((Integer)mapInRelation.get(URI[i])).toString();
+				printRequestS2.print(tmp[i] + " " + (s2+1) + " 1\n");
+				s2++;
+				System.out.println("R: "+i);
 			} else {
-				tmp[k]="1";
+				tmp[i]= "1";
+				printRequestS1.print(tmp[i] + " " + (s1+1) + " 1\n");
+				System.out.println("I: "+i);
 				//throw new IllegalArgumentException("The URI "+ uri +" is not in the index!");
+				s1++;
 			}
-			k++;
 		}
-		String indeces = String.join(", ", tmp);
+
+		if (s1!=0){
+			printRequestS1.print(rowI + " " + s1 + " 0\n");
+			octave.eval("load "+System.getProperty("user.dir")+"/index/requestS1"+"; ");
+               		octave.eval("S1 = spconvert(requestS1); ");
+		} else {
+			octave.eval("S1 = sparse("+rowI+",0); ");	
+		}
+		
+		if (s2!=0){
+                        printRequestS2.print(rowR + " " + s2 + " 0\n");
+                        octave.eval("load "+System.getProperty("user.dir")+"/index/requestS2"+"; ");
+                        octave.eval("S2 = spconvert(requestS2); ");
+                } else {
+                        octave.eval("S2 = sparse("+rowR+",0); ");         
+                }
+
+		
+		octave.eval("i=size(S1,1);");
+		octave.eval("r=size(S2,2);");
+		
+		//octave.eval("I2=I1*I1;");
+		//octave.eval("I3=I2*I1;");
+	
+		System.out.println("Size S1");
+		octave.eval("size(S1,1)");
+                octave.eval("size(S1,2)");
+		
+		System.out.println("Size S2");
+                octave.eval("size(S2,1)");
+                octave.eval("size(S2,2)");
+
+		System.out.println("Size R1");
+                octave.eval("size(R1,1)");
+                octave.eval("size(R1,2)");
+
+long startTime = System.currentTimeMillis();
+	
+		octave.eval("A1up=[sparse("+s1+","+s1+") S1'*R1*S2];");
+		octave.eval("A1down=[S2'*R2*S1, sparse("+s2+","+s2+")];");
+		octave.eval("A1=[A1up ; A1down];");
+
+long estimatedTime = System.currentTimeMillis() - startTime;
+System.out.println("eval: "+estimatedTime);		
+		
+		octave.eval("clear A1up;");
+		octave.eval("clear A1down;");
+		
+		octave.eval("A2up=[S1'*(I1*S1) sparse("+s1+","+s2+")];");
+		octave.eval("A2down=[sparse("+s2+","+s1+") S2'*R2*(R1*S2)];");
+		octave.eval("A2=[A2up ; A2down];");
+
+estimatedTime = System.currentTimeMillis() - startTime;
+System.out.println("eval: "+estimatedTime);
+		
+		octave.eval("clear A2up;");
+		octave.eval("clear A2down;");
+		
+		octave.eval("A3up=[sparse("+s1+","+s1+") S1'*(I1*(R1*S2))];");
+		octave.eval("A3down=[S2'*(R2*(I1*S1)), sparse("+s2+","+s2+")];");
+		octave.eval("A3=[A3up ; A3down];");
+
+estimatedTime = System.currentTimeMillis() - startTime;
+System.out.println("eval: "+estimatedTime);
+		
+		octave.eval("clear A3up;");
+		octave.eval("clear A3down;");
+		//octave.eval("clear I;");
+		
+		octave.eval("A4up=[(S1'*I1)*(I1*S1) sparse("+s1+","+s2+")];");
+		octave.eval("A4down=[sparse("+s2+","+s1+") (S2'*(R2*I1))*((I1*R1)*S2)];");
+		octave.eval("A4=[A4up ; A4down];");
+
+estimatedTime = System.currentTimeMillis() - startTime;
+System.out.println("eval: "+estimatedTime);
+		
+		octave.eval("clear A4up;");
+		octave.eval("clear A4down;");
+		
+		//octave.eval("A5up=[sparse(i,i) S2'*I2*R1*S2];");
+		//octave.eval("A5down=[S1'*R2*I2*S1, sparse(r,r)];");
+		//octave.eval("A5=[A5up ; A5down];");
+		
+		//octave.eval("clear A5up;");
+		//octave.eval("clear A5down;");
+		//octave.eval("clear I2;");
+		
+		//octave.eval("A6up=[S1'*I3*S1 sparse(i,r)];");
+		//octave.eval("A6down=[sparse(r,i) S2'*R2*I3*R1*S2];");
+		//octave.eval("A6=[A6up ; A6down];");
+		
+		//octave.eval("clear A5up;");
+		//octave.eval("clear A5down;");
+		//octave.eval("clear I3;");
+		
+		
+		octave.eval("B1=spones(A1);");
+		octave.eval("clear A1;");
+		octave.eval("B2=spones(A2);");
+		octave.eval("clear A2;");
+		octave.eval("B3=spones(A3);");
+		octave.eval("clear A3;");
+		octave.eval("B4=spones(A4);");
+		octave.eval("clear A4;");
+		//octave.eval("B5=spones(A5);");
+		//octave.eval("clear A5;");
+		//octave.eval("B6=spones(A6);");
+		//octave.eval("clear A6;");
+		
+estimatedTime = System.currentTimeMillis() - startTime;
+System.out.println("eval: "+estimatedTime);
+
+		octave.eval("C1=B1;");
+		octave.eval("C2=B2;");
+		octave.eval("C3=B3-B1;");
+		octave.eval("C4=B4-B2;");
+		//octave.eval("C5=B5-B3-B1;");
+		//octave.eval("C6=B6-B4-B2;");
+		
+estimatedTime = System.currentTimeMillis() - startTime;
+System.out.println("eval: "+estimatedTime);
+
+		octave.eval("clear B1;");
+		octave.eval("clear B2;");
+		octave.eval("clear B3;");
+		octave.eval("clear B4;");
+		//octave.eval("clear B5;");
+		//octave.eval("clear B6;");
+		
+		octave.eval("D1=C1;");
+		octave.eval("D2=C2;");
+		octave.eval("D3=spfun(@(x)x.*(x>=0),C3);");
+		octave.eval("D4=spfun(@(x)x.*(x>=0),C4);");
+		//octave.eval("D5=spfun(@(x)x.*(x>=0),C5);");
+		//octave.eval("D6=spfun(@(x)x.*(x>=0),C6);");
+		
+		octave.eval("clear C1;");
+		octave.eval("clear C2;");
+		octave.eval("clear C3;");
+		octave.eval("clear C4;");
+		//octave.eval("clear C5;");
+		//octave.eval("clear C6;");
+		
+		//octave.eval("B=D1+2*D2+3*D3+4*D4+5*D5+6*D6;");
+		octave.eval("B=D1+2*D2+3*D3+4*D4;");
+
+estimatedTime = System.currentTimeMillis() - startTime;
+System.out.println("eval: "+estimatedTime);
+
+		octave.eval("clear D1;");
+		octave.eval("clear D2;");
+		octave.eval("clear D3;");
+		octave.eval("clear D4;");
+		//octave.eval("clear D5;");
+		//octave.eval("clear D6;");	
+		
+
+
 		
         //Selects the submatrix containing the rows and columns contained in indeces
-        startTime = System.currentTimeMillis();
-        octave.eval("C = full(B(["+indeces+" ] , [ "+indeces+"]))");
-        long estimatedTime = System.currentTimeMillis() - startTime;
+        //long startTime = System.currentTimeMillis();
+        //octave.eval("C = full(B(["+indeces+" ] , [ "+indeces+"]))");
+        octave.eval("C = full(B);");
+	//long estimatedTime = System.currentTimeMillis() - startTime;
         System.out.println("eval: "+estimatedTime);
         OctaveDouble ans = octave.get(OctaveDouble.class, "C");
         double[] a = ans.getData();
-        estimatedTime = System.currentTimeMillis() - startTime;
-        System.out.println("Retrive: "+estimatedTime);
+        //estimatedTime = System.currentTimeMillis() - startTime;
+        //System.out.println("Retrive: "+estimatedTime);
         OpenMapRealMatrix B = new  OpenMapRealMatrix(URI.length,URI.length);
         System.out.println("Length"+URI.length);
         for (int i=0; i<URI.length; i++){
@@ -221,7 +397,9 @@ public class Index {
 		
 		System.out.println("Number triples: " + j);
 		System.out.println("The shortest paths are computed ... ");
-		
+	
+		rowI=i;
+		rowR=r;	
 		
 		//Use the octave instance to compute matrix multiplication
 		/*	
@@ -273,7 +451,7 @@ public class Index {
 		octave.eval("R1 = spconvert(matrixR1); ");
 		octave.eval("load "+System.getProperty("user.dir")+"/index/matrixR2"+"; ");
 		octave.eval("R2 = spconvert(matrixR2); ");
-		
+	/*	
 		octave.eval("i=size(I1,1);");
 		octave.eval("r=size(R1,2);");
 		
@@ -382,7 +560,7 @@ public class Index {
 		octave.eval("clear D4;");
 		//octave.eval("clear D5;");
 		//octave.eval("clear D6;");
-		
+	*/	
 		
 		//To print out the matrix in DOK format uncomment this lines
 		/*

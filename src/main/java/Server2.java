@@ -18,7 +18,7 @@ public class Server2 {
         	System.out.println("\nIndexing finished!");
         	System.out.println("I'm ready!");
         	
-            ServerSocket serverSocket = new ServerSocket(1222);
+            ServerSocket serverSocket = new ServerSocket(1112);
             while (acceptMore) {
                 Socket socket = serverSocket.accept();
                 InputStream is =socket.getInputStream();
