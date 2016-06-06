@@ -28,17 +28,17 @@ import org.apache.jena.riot.lang.PipedRDFIterator;
 import org.apache.jena.riot.lang.PipedRDFStream;
 import org.apache.jena.riot.lang.PipedTriplesStream;
 import org.apache.log4j.BasicConfigurator;
-import org.jgrapht.DirectedGraph;
-import org.jgrapht.graph.DefaultDirectedGraph;
-import org.jgrapht.graph.DefaultEdge;
+//import org.jgrapht.DirectedGraph;
+//import org.jgrapht.graph.DefaultDirectedGraph;
+//import org.jgrapht.graph.DefaultEdge;
 
 import algorithms.Digraph;
 import algorithms.In;
 
 public class Index {
 	
-	String dump = "/Users/Dennis/Downloads/mappingbased_objects_en_uris_it.ttl";
-	
+	String dump = "/home_expes/dd77474h/dump-en-P-C.nt";
+	//String dump = "/home_expes/dd77474h/test_small.nt";
 	
 	private HashMap<String,Integer> mapIn = new HashMap<String,Integer>();
 	private ArrayList<String> mapOut = new ArrayList<String>();
@@ -75,11 +75,11 @@ public class Index {
 	                	if (urisHash.containsKey(mapOut.get(g.adj_out(n).get(w)))){
 	                		B.setEntry(v, urisHash.get(mapOut.get(g.adj_out(n).get(w))), 2.0);
 	                	}
-	                	results.add("   "+mapOutRelation.get(g.edge_out(n).get(w))+" --- "+mapOut.get(g.adj_out(n).get(w)));
+	                	//results.add("   "+mapOutRelation.get(g.edge_out(n).get(w))+" --- "+mapOut.get(g.adj_out(n).get(w)));
 	                	//System.out.println(mapOut.get(w));
 	                    for (int l=0; l<g.adj_out(w).size(); l++){
 	                    	i++;
-	                    	if (urisHash.containsKey(mapOutRelation.get(g.edge_out(w).get(l)))){
+	                    	if (urisHash.containsKey(mapOutRelation.get(g.edge_out(w).get(l))) && B.getEntry(v, urisHash.get(mapOutRelation.get(g.edge_out(w).get(l))))==0){
 		                		B.setEntry(v, urisHash.get(mapOutRelation.get(g.edge_out(w).get(l))), 3.0);
 		                	}
 		                	if (urisHash.containsKey(mapOut.get(g.adj_out(w).get(l))) && B.getEntry(v, urisHash.get(mapOut.get(g.adj_out(w).get(l))))==0){
@@ -111,7 +111,7 @@ public class Index {
                     	//results.add("<  "+mapOutRelation.get(g.edge_in(n).get(w))+" --- "+mapOut.get(g.adj_in(n).get(w)));
                     	for (int l=0; l<g.adj_out(w).size(); l++){
 	                    	i++;
-	                    	if (urisHash.containsKey(mapOutRelation.get(g.edge_out(w).get(l)))){
+	                    	if (urisHash.containsKey(mapOutRelation.get(g.edge_out(w).get(l))) && B.getEntry(v, urisHash.get(mapOutRelation.get(g.edge_out(w).get(l))))==0){
 		                		B.setEntry(v, urisHash.get(mapOutRelation.get(g.edge_out(w).get(l))), -3.0);
 		                	}
 	                    	if (urisHash.containsKey(mapOut.get(g.adj_out(w).get(l))) && (int)B.getEntry(v, urisHash.get(mapOut.get(g.adj_out(w).get(l))))==0){
@@ -203,7 +203,7 @@ public class Index {
 	    	    	i++;
             	}
             }
-	    	if(i % 1000 == 0) {
+	    	if(i % 1000000 == 0) {
 	    		if (i!=before){
 	 	    		System.out.println(i);
 	 	    	}
