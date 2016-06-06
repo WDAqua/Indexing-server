@@ -69,28 +69,31 @@ public class Index {
         	if (map.containsKey(uris[v])){
 	        	System.out.println(v);
 	        	int n=map.get(uris[v]);
-	        		//results.add(mapOut.get(n));
+	        		results.add(map.inverse().get(n));
 	        		//System.out.println(v);
 	                for (int w=0; w < g.adj_out(n).size(); w++) {
-	                	if (urisHash.containsKey(mapRelation.inverse().get(g.edge_out(n).get(w)))){
-	                		B.setEntry(v, urisHash.get(mapRelation.inverse().get(g.edge_out(n).get(w))), 1.0);
+	                	String edge=mapRelation.inverse().get(g.edge_out(n).get(w));
+	                	String node=map.inverse().get(g.adj_out(n).get(w));
+	                	if (urisHash.containsKey(edge)){
+	                		B.setEntry(v, urisHash.get(edge), 1.0);
 	                	}
-	                	if (urisHash.containsKey(map.inverse().get(g.adj_out(n).get(w)))){
-	                		B.setEntry(v, urisHash.get(map.inverse().get(g.adj_out(n).get(w))), 2.0);
+	                	if (urisHash.containsKey(node)){
+	                		B.setEntry(v, urisHash.get(node), 2.0);
 	                	}
-	                	//results.add("   "+mapOutRelation.get(g.edge_out(n).get(w))+" --- "+mapOut.get(g.adj_out(n).get(w)));
-	                	//System.out.println(mapOut.get(w));
+	                	results.add("   "+edge+" --- "+node);
 	                    for (int l=0; l<g.adj_out(w).size(); l++){
+	                    	edge=mapRelation.inverse().get(g.edge_out(w).get(l));
+	                    	node=map.inverse().get(g.adj_out(w).get(l));
 	                    	i++;
-	                    	if (urisHash.containsKey(mapRelation.inverse().get(g.edge_out(w).get(l))) && B.getEntry(v, urisHash.get(mapRelation.inverse().get(g.edge_out(w).get(l))))==0){
-		                		B.setEntry(v, urisHash.get(mapRelation.inverse().get(g.edge_out(w).get(l))), 3.0);
+	                    	if (urisHash.containsKey(edge) && B.getEntry(v, urisHash.get(edge))==0){
+		                		B.setEntry(v, urisHash.get(edge), 3.0);
 		                	}
-		                	if (urisHash.containsKey(map.inverse().get(g.adj_out(w).get(l))) && B.getEntry(v, urisHash.get(map.inverse().get(g.adj_out(w).get(l))))==0){
+		                	if (urisHash.containsKey(node) && B.getEntry(v, urisHash.get(node))==0){
 		                		//System.out.println("Here"+B.getEntry(v, urisHash.get(mapOut.get(g.adj_out(w).get(l)))));
-		                		B.setEntry(v, urisHash.get(map.inverse().get(g.adj_out(w).get(l))), 4.0);
+		                		B.setEntry(v, urisHash.get(node), 4.0);
 		                	}
 	                    	//System.out.println("    "+mapOut.get(l));
-	                    	//results.add("      "+mapOutRelation.get(g.edge_out(w).get(l))+" --- "+mapOut.get(g.adj_out(w).get(l)));
+	                    	results.add("      "+edge+" --- "+node);
 	                    	//big.addEdge(v, l);
 	                    }
 	                    /*
@@ -109,19 +112,28 @@ public class Index {
 	                    }*/
 	                }
 	                for (int w=0; w<g.adj_in(n).size(); w++){
-                    	i++;
-                    	//System.out.println("    "+mapOut.get(l));
-                    	//results.add("<  "+mapOutRelation.get(g.edge_in(n).get(w))+" --- "+mapOut.get(g.adj_in(n).get(w)));
+	                	String edge=mapRelation.inverse().get(g.edge_in(n).get(w));
+	                	String node=map.inverse().get(g.adj_in(n).get(w));
+	                	if (urisHash.containsKey(edge)){
+	                		B.setEntry(urisHash.get(edge), v , 1.0);
+	                	}
+	                	if (urisHash.containsKey(node)){
+	                		B.setEntry(urisHash.get(node), v, 2.0);
+	                	}
+	                	i++;
+                    	results.add("<  "+edge+" --- "+node);
                     	for (int l=0; l<g.adj_out(w).size(); l++){
-	                    	i++;
-	                    	if (urisHash.containsKey(mapRelation.inverse().get(g.edge_out(w).get(l))) && B.getEntry(v, urisHash.get(mapRelation.inverse().get(g.edge_out(w).get(l))))==0){
-		                		B.setEntry(v, urisHash.get(mapRelation.inverse().get(g.edge_out(w).get(l))), -3.0);
+	                    	edge=mapRelation.inverse().get(g.edge_out(w).get(l));
+	                    	node=map.inverse().get(g.adj_out(w).get(l));
+                    		i++;
+	                    	if (urisHash.containsKey(edge) && B.getEntry(v, urisHash.get(edge))==0){
+		                		B.setEntry(v, urisHash.get(edge), -3.0);
 		                	}
-	                    	if (urisHash.containsKey(map.inverse().get(g.adj_out(w).get(l))) && (int)B.getEntry(v, urisHash.get(map.inverse().get(g.adj_out(w).get(l))))==0){
-		                		B.setEntry(v, urisHash.get(map.inverse().get(g.adj_out(w).get(l))), -4.0);
+	                    	if (urisHash.containsKey(node) && (int)B.getEntry(v, urisHash.get(node))==0){
+		                		B.setEntry(v, urisHash.get(node), -4.0);
 		                	}
 	                    	//System.out.println("    "+mapOut.get(l));
-	                    	//results.add("<<    "+mapOutRelation.get(g.edge_out(w).get(l))+" --- "+mapOut.get(g.adj_out(w).get(l)));
+	                    	results.add("<<    "+edge+" --- "+node);
 	                    	//big.addEdge(v, l);
 	                    }
                     }
