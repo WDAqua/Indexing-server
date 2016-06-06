@@ -2,6 +2,9 @@ package algorithms;
 
 import java.util.ArrayList;
 
+import gnu.trove.list.array.TIntArrayList;
+import gnu.trove.list.array.TShortArrayList;
+
 /******************************************************************************
  *  Compilation:  javac Digraph.java
  *  Execution:    java Digraph filename.txt
@@ -59,10 +62,10 @@ public class Digraph {
 
     private final int V;           // number of vertices in this digraph
     private int E;                 // number of edges in this digraph
-    private ArrayList<Integer>[] adj_out;    // adj[v] = adjacency list for vertex v
-    private ArrayList<Integer>[] edge_out;
-    private ArrayList<Integer>[] adj_in;
-    private ArrayList<Integer>[] edge_in;
+    private TIntArrayList[] adj_out;    // adj[v] = adjacency list for vertex v
+    private TIntArrayList[] edge_out;
+    private TIntArrayList[] adj_in;
+    private TIntArrayList[] edge_in;
     //private int[] indegree;        // indegree[v] = indegree of vertex v
     
     /**
@@ -76,21 +79,21 @@ public class Digraph {
         this.V = V;
         this.E = 0;
         //indegree = new int[V];
-        adj_in = (ArrayList<Integer>[]) new ArrayList[V];
+        adj_in = (TIntArrayList[]) new TIntArrayList[V];
         for (int v = 0; v < V; v++) {
-            adj_in[v] = new ArrayList<Integer>();
+            adj_in[v] = new TIntArrayList();
         }
-        adj_out = (ArrayList<Integer>[]) new ArrayList[V];
+        adj_out = (TIntArrayList[]) new TIntArrayList[V];
         for (int v = 0; v < V; v++) {
-            adj_out[v] = new ArrayList<Integer>();
+            adj_out[v] = new TIntArrayList();
         }
-        edge_in = (ArrayList<Integer>[]) new ArrayList[V];
+        edge_in = (TIntArrayList[]) new TIntArrayList[V];
         for (int v = 0; v < V; v++) {
-            edge_in[v] = new ArrayList<Integer>();
+            edge_in[v] = new TIntArrayList();
         }
-        edge_out = (ArrayList<Integer>[]) new ArrayList[V];
+        edge_out = (TIntArrayList[]) new TIntArrayList[V];
         for (int v = 0; v < V; v++) {
-            edge_out[v] = new ArrayList<Integer>();
+            edge_out[v] = new TIntArrayList();
         }
     }
 
@@ -136,6 +139,7 @@ public class Digraph {
      *
      * @param  G the digraph to copy
      */
+    /*
     public Digraph(Digraph G) {
         this(G.V());
         this.E = G.E();
@@ -152,7 +156,7 @@ public class Digraph {
             }
         }
     }
-        
+    */    
     /**
      * Returns the number of vertices in this digraph.
      *
@@ -214,22 +218,22 @@ public class Digraph {
      * @return the vertices adjacent from vertex <tt>v</tt> in this digraph, as an iterable
      * @throws IndexOutOfBoundsException unless 0 <= v < V
      */
-    public ArrayList<Integer> adj_out(int v) {
+    public TIntArrayList adj_out(int v) {
         validateVertex(v);
         return adj_out[v];
     }
 
-    public ArrayList<Integer> edge_out(int v) {
+    public TIntArrayList edge_out(int v) {
         validateVertex(v);
         return edge_out[v] ;
     }
     
-    public ArrayList<Integer> adj_in(int v) {
+    public TIntArrayList adj_in(int v) {
         validateVertex(v);
         return adj_in[v];
     }
     
-    public ArrayList<Integer> edge_in(int v) {
+    public TIntArrayList edge_in(int v) {
         validateVertex(v);
         return edge_in[v];
     }
@@ -282,6 +286,7 @@ public class Digraph {
      * @return the number of vertices <em>V</em>, followed by the number of edges <em>E</em>,  
      *         followed by the <em>V</em> adjacency lists
      */
+    /*
     public String toString() {
         StringBuilder s = new StringBuilder();
         s.append(V + " vertices, " + E + " edges " + NEWLINE);
@@ -294,7 +299,7 @@ public class Digraph {
         }
         return s.toString();
     }
-
+	*/
     /**
      * Unit tests the <tt>Digraph</tt> data type.
      */

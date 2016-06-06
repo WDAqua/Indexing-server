@@ -21,6 +21,8 @@ import no.uib.cipr.matrix.io.MatrixVectorReader;
 import no.uib.cipr.matrix.sparse.CompColMatrix;
 //Sparse matrix implementation
 import org.apache.commons.math3.linear.OpenMapRealMatrix;
+import org.apache.jena.ext.com.google.common.collect.BiMap;
+import org.apache.jena.ext.com.google.common.collect.HashBiMap;
 import org.apache.jena.graph.Triple;
 //For parsing RDF files
 import org.apache.jena.riot.RDFDataMgr;
@@ -37,13 +39,14 @@ import algorithms.In;
 
 public class Index {
 	
-	String dump = "/home_expes/dd77474h/dump-en-P-C.nt";
+	String dump = "/Users/Dennis/Downloads/mappingbased_objects_en_uris_it.ttl";
 	//String dump = "/home_expes/dd77474h/test_small.nt";
 	
-	private HashMap<String,Integer> mapIn = new HashMap<String,Integer>();
-	private ArrayList<String> mapOut = new ArrayList<String>();
-	private HashMap<String,Integer> mapInRelation = new HashMap<String,Integer>();
-	private ArrayList<String> mapOutRelation = new ArrayList<String>();
+	private BiMap<String, Integer> map = HashBiMap.create();
+	// ArrayList<String> mapOut = new ArrayList<String>();
+	private BiMap<String, Integer> mapRelation = HashBiMap.create();
+	//private HashMap<String,Integer> mapRelation = new HashMap<String,Integer>();
+	//private ArrayList<String> mapOutRelation = new ArrayList<String>();
 	private CompColMatrix matrixIndex;
 	private OctaveEngine octave;
 	private int rowI;
@@ -63,28 +66,28 @@ public class Index {
         ArrayList<String> results=new ArrayList<String>();
         //Random rand = new Random();
         for (int v = 0; v < uris.length; v++) {
-        	if (mapIn.containsKey(uris[v])){
+        	if (map.containsKey(uris[v])){
 	        	System.out.println(v);
-	        	int n=mapIn.get(uris[v]);
+	        	int n=map.get(uris[v]);
 	        		//results.add(mapOut.get(n));
 	        		//System.out.println(v);
 	                for (int w=0; w < g.adj_out(n).size(); w++) {
-	                	if (urisHash.containsKey(mapOutRelation.get(g.edge_out(n).get(w)))){
-	                		B.setEntry(v, urisHash.get(mapOutRelation.get(g.edge_out(n).get(w))), 1.0);
+	                	if (urisHash.containsKey(mapRelation.inverse().get(g.edge_out(n).get(w)))){
+	                		B.setEntry(v, urisHash.get(mapRelation.inverse().get(g.edge_out(n).get(w))), 1.0);
 	                	}
-	                	if (urisHash.containsKey(mapOut.get(g.adj_out(n).get(w)))){
-	                		B.setEntry(v, urisHash.get(mapOut.get(g.adj_out(n).get(w))), 2.0);
+	                	if (urisHash.containsKey(map.inverse().get(g.adj_out(n).get(w)))){
+	                		B.setEntry(v, urisHash.get(map.inverse().get(g.adj_out(n).get(w))), 2.0);
 	                	}
 	                	//results.add("   "+mapOutRelation.get(g.edge_out(n).get(w))+" --- "+mapOut.get(g.adj_out(n).get(w)));
 	                	//System.out.println(mapOut.get(w));
 	                    for (int l=0; l<g.adj_out(w).size(); l++){
 	                    	i++;
-	                    	if (urisHash.containsKey(mapOutRelation.get(g.edge_out(w).get(l))) && B.getEntry(v, urisHash.get(mapOutRelation.get(g.edge_out(w).get(l))))==0){
-		                		B.setEntry(v, urisHash.get(mapOutRelation.get(g.edge_out(w).get(l))), 3.0);
+	                    	if (urisHash.containsKey(mapRelation.inverse().get(g.edge_out(w).get(l))) && B.getEntry(v, urisHash.get(mapRelation.inverse().get(g.edge_out(w).get(l))))==0){
+		                		B.setEntry(v, urisHash.get(mapRelation.inverse().get(g.edge_out(w).get(l))), 3.0);
 		                	}
-		                	if (urisHash.containsKey(mapOut.get(g.adj_out(w).get(l))) && B.getEntry(v, urisHash.get(mapOut.get(g.adj_out(w).get(l))))==0){
+		                	if (urisHash.containsKey(map.inverse().get(g.adj_out(w).get(l))) && B.getEntry(v, urisHash.get(map.inverse().get(g.adj_out(w).get(l))))==0){
 		                		//System.out.println("Here"+B.getEntry(v, urisHash.get(mapOut.get(g.adj_out(w).get(l)))));
-		                		B.setEntry(v, urisHash.get(mapOut.get(g.adj_out(w).get(l))), 4.0);
+		                		B.setEntry(v, urisHash.get(map.inverse().get(g.adj_out(w).get(l))), 4.0);
 		                	}
 	                    	//System.out.println("    "+mapOut.get(l));
 	                    	//results.add("      "+mapOutRelation.get(g.edge_out(w).get(l))+" --- "+mapOut.get(g.adj_out(w).get(l)));
@@ -111,11 +114,11 @@ public class Index {
                     	//results.add("<  "+mapOutRelation.get(g.edge_in(n).get(w))+" --- "+mapOut.get(g.adj_in(n).get(w)));
                     	for (int l=0; l<g.adj_out(w).size(); l++){
 	                    	i++;
-	                    	if (urisHash.containsKey(mapOutRelation.get(g.edge_out(w).get(l))) && B.getEntry(v, urisHash.get(mapOutRelation.get(g.edge_out(w).get(l))))==0){
-		                		B.setEntry(v, urisHash.get(mapOutRelation.get(g.edge_out(w).get(l))), -3.0);
+	                    	if (urisHash.containsKey(mapRelation.inverse().get(g.edge_out(w).get(l))) && B.getEntry(v, urisHash.get(mapRelation.inverse().get(g.edge_out(w).get(l))))==0){
+		                		B.setEntry(v, urisHash.get(mapRelation.inverse().get(g.edge_out(w).get(l))), -3.0);
 		                	}
-	                    	if (urisHash.containsKey(mapOut.get(g.adj_out(w).get(l))) && (int)B.getEntry(v, urisHash.get(mapOut.get(g.adj_out(w).get(l))))==0){
-		                		B.setEntry(v, urisHash.get(mapOut.get(g.adj_out(w).get(l))), -4.0);
+	                    	if (urisHash.containsKey(map.inverse().get(g.adj_out(w).get(l))) && (int)B.getEntry(v, urisHash.get(map.inverse().get(g.adj_out(w).get(l))))==0){
+		                		B.setEntry(v, urisHash.get(map.inverse().get(g.adj_out(w).get(l))), -4.0);
 		                	}
 	                    	//System.out.println("    "+mapOut.get(l));
 	                    	//results.add("<<    "+mapOutRelation.get(g.edge_out(w).get(l))+" --- "+mapOut.get(g.adj_out(w).get(l)));
@@ -142,12 +145,12 @@ public class Index {
 	
 	
 	public Integer get(String URI) throws IOException, ClassNotFoundException{
-		return (Integer) mapIn.get(URI);
+		return (Integer) map.get(URI);
 	}
 	
 	
 	public String get(Integer i) throws IOException, ClassNotFoundException{
-		return (String)mapOut.get(i);
+		return (String)map.inverse().get(i);
 	}
 	
 	public void index() throws IOException, ClassNotFoundException{
@@ -175,31 +178,31 @@ public class Index {
         Integer i=1;
         Integer before=0;
         int r=1;
-        mapOut.add("null");
-        mapOutRelation.add("add");
+        //mapOut.add("null");
+        //mapOutRelation.add("add");
         System.out.println("Parse the dump and search for all subjects objects and relations ...");
         System.out.println("If this slows down, and does not come to an end, you probably need more RAM!");
         while (iter.hasNext()) {
             Triple next = iter.next();
             // Look if subject already encounterd
-            if (mapIn.containsKey(next.getSubject().toString())==false){
-            	mapIn.put(next.getSubject().toString(),i);
-    	    	mapOut.add(next.getSubject().toString());
+            if (map.containsKey(next.getSubject().toString())==false){
+            	map.put(next.getSubject().toString(),i);
+    	    	//mapOut.add(next.getSubject().toString());
     	    	i++;
         		
         	}
             //Look if the relation was already encountered
-            if (mapInRelation.containsKey(next.getPredicate().toString())==false){
+            if (mapRelation.containsKey(next.getPredicate().toString())==false){
         		//System.out.println(next.getPredicate());
-        		mapInRelation.put(next.getPredicate().toString(),r);
-        		mapOutRelation.add(next.getPredicate().toString());
+        		mapRelation.put(next.getPredicate().toString(),r);
+        		//mapOutRelation.add(next.getPredicate().toString());
         		r++;
         	}
             //Look if object is an uri and was already encountered
             if (next.getObject().isURI()==true){ 
-            	if (mapIn.containsKey(next.getObject().toString())==false){
-	            	mapIn.put(next.getObject().toString(),i);
-	    	    	mapOut.add(next.getObject().toString());
+            	if (map.containsKey(next.getObject().toString())==false){
+	            	map.put(next.getObject().toString(),i);
+	    	    	//mapOut.add(next.getObject().toString());
 	    	    	i++;
             	}
             }
@@ -236,9 +239,9 @@ public class Index {
 		while ( iter.hasNext()){
 			Triple next = iter.next();
 			if (next.getObject().isURI()){
-				Integer s = mapIn.get(next.getSubject().toString());
-				Integer p = mapInRelation.get(next.getPredicate().toString()); 
-				Integer o = mapIn.get(next.getObject().toString());
+				Integer s = map.get(next.getSubject().toString());
+				Integer p = mapRelation.get(next.getPredicate().toString()); 
+				Integer o = map.get(next.getObject().toString());
 				if (s!=null){
 					if (s!=null && o!=null){
 						g.addEdge(s, p, o);
@@ -248,8 +251,8 @@ public class Index {
 					}	
 				}	
 			} else {
-				Object s = mapIn.get(next.getSubject().toString());
-				Object p = mapInRelation.get(next.getPredicate().toString());
+				Object s = map.get(next.getSubject().toString());
+				Object p = mapRelation.get(next.getPredicate().toString());
 				if (s!=null){
 					//printStreamR1.print(s + " " + p + " 1\n");
 				}
