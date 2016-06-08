@@ -211,6 +211,14 @@ public class Digraph {
         E++;
     }
 
+    public void addEdge(int v, int e) {
+        validateVertex(v);
+        adj_out[v].add(0);
+        edge_out[v].add(e);
+        //indegree[w]++;
+        E++;
+    }
+
     /**
      * Returns the vertices adjacent from vertex <tt>v</tt> in this digraph.
      *

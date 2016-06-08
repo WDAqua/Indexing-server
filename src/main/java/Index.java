@@ -33,13 +33,14 @@ import org.apache.log4j.BasicConfigurator;
 //import org.jgrapht.DirectedGraph;
 //import org.jgrapht.graph.DefaultDirectedGraph;
 //import org.jgrapht.graph.DefaultEdge;
+import java.util.HashSet;
 
 import algorithms.Digraph;
 import algorithms.In;
 
 public class Index {
 	
-	String dump = "/Users/Dennis/Downloads/mappingbased_objects_en_uris_it.ttl";
+	String dump = "/home_expes/dd77474h/dump-en-P-C.nt";
 	//String dump = "/home_expes/dd77474h/test_small.nt";
 	
 	private BiMap<String, Integer> map = HashBiMap.create();
@@ -65,93 +66,116 @@ public class Index {
 		int i=0;
         ArrayList<String> results=new ArrayList<String>();
         //Random rand = new Random();
-        for (int v = 0; v < uris.length; v++) {
+        HashSet<String> relations = new HashSet<String>();
+	for (int v = 0; v < uris.length; v++) {
         	if (map.containsKey(uris[v])){
-	        	System.out.println(v);
+		String s=uris[v].replace("http://dbpedia.org/ontology/","");
+                if (Character.isUpperCase(s.charAt(0))==false){
 	        	int n=map.get(uris[v]);
-	        		results.add(map.inverse().get(n));
+	        		//results.add(map.inverse().get(n));
 	        		//System.out.println(v);
 	                for (int w=0; w < g.adj_out(n).size(); w++) {
-	                	String edge=mapRelation.inverse().get(g.edge_out(n).get(w));
-	                	String node=map.inverse().get(g.adj_out(n).get(w));
-	                	if (urisHash.containsKey(edge)){
-	                		B.setEntry(v, urisHash.get(edge), 1.0);
+	                	int next = g.adj_out(n).get(w);
+				String edge1=mapRelation.inverse().get(g.edge_out(n).get(w));
+				boolean edge1_found=false;
+	                	relations.add(edge1);
+				String node1=map.inverse().get(g.adj_out(n).get(w));
+				boolean node1_found=false;
+	                	if (urisHash.containsKey(edge1)){
+	                		B.setEntry(v, urisHash.get(edge1), 1.0);
+					edge1_found=true;
 	                	}
-	                	if (urisHash.containsKey(node)){
-	                		B.setEntry(v, urisHash.get(node), 2.0);
+	                	if (urisHash.containsKey(node1)){
+	                		B.setEntry(v, urisHash.get(node1), 2.0);
+					node1_found=true;
 	                	}
-	                	results.add("   "+edge+" --- "+node);
-	                    for (int l=0; l<g.adj_out(w).size(); l++){
-	                    	edge=mapRelation.inverse().get(g.edge_out(w).get(l));
-	                    	node=map.inverse().get(g.adj_out(w).get(l));
-	                    	i++;
-	                    	if (urisHash.containsKey(edge) && B.getEntry(v, urisHash.get(edge))==0){
-		                		B.setEntry(v, urisHash.get(edge), 3.0);
+	                	//results.add("   "+edge1+" --- "+node1);
+	                	for (int l=0; l<g.adj_out(next).size(); l++){
+	                    		String edge2=mapRelation.inverse().get(g.edge_out(next).get(l));
+	                    		String node2=map.inverse().get(g.adj_out(next).get(l));
+	                    		i++;
+	                    		if (urisHash.containsKey(edge2) && B.getEntry(v, urisHash.get(edge2))==0){
+		                		B.setEntry(v, urisHash.get(edge2), 3.0);
+						if (edge1_found==true && B.getEntry(urisHash.get(edge1), urisHash.get(edge2))==0){
+							B.setEntry(urisHash.get(edge1), urisHash.get(edge2), 2.0);
+						}
 		                	}
-		                	if (urisHash.containsKey(node) && B.getEntry(v, urisHash.get(node))==0){
-		                		//System.out.println("Here"+B.getEntry(v, urisHash.get(mapOut.get(g.adj_out(w).get(l)))));
-		                		B.setEntry(v, urisHash.get(node), 4.0);
+		                	if (urisHash.containsKey(node2) && B.getEntry(v, urisHash.get(node2))==0){
+		                		B.setEntry(v, urisHash.get(node2), 4.0);
+						if (edge1_found==true && B.getEntry(urisHash.get(edge1), urisHash.get(node2))==0){
+                                                        B.setEntry(urisHash.get(edge1), urisHash.get(node2), 3.0);
+                                                }
 		                	}
-	                    	//System.out.println("    "+mapOut.get(l));
-	                    	results.add("      "+edge+" --- "+node);
-	                    	//big.addEdge(v, l);
-	                    }
-	                    /*
-	                    //Go back
-	                    for (int l=0; l<g.adj_in(w).size(); l++){
-	                    	i++;
-	                    	if (urisHash.containsKey(mapOutRelation.get(g.edge_in(w).get(l)))){
-		                		B.setEntry(v, urisHash.get(mapOutRelation.get(g.edge_in(w).get(l))), -3.0);
-		                	}
-		                	if (urisHash.containsKey(mapOut.get(g.adj_in(w).get(l)))){
-		                		B.setEntry(v, urisHash.get(mapOut.get(g.adj_in(w).get(l))), -4.0);
-		                	}
-	                    	//System.out.println("    "+mapOut.get(l));
-	                    	//results.add("<     "+mapOutRelation.get(g.edge_in(w).get(l))+" --- "+mapOut.get(g.adj_in(w).get(l)));
-	                    	//big.addEdge(v, l);
-	                    }*/
+	                    	}
+				/*
+				//Go back but not for classes
+				if (node1!=null){
+				s=node1.replace("http://dbpedia.org/ontology/","");
+                		if (Character.isUpperCase(s.charAt(0))==false){
+	                   		for (int l=0; l<g.adj_in(w).size(); l++){
+						String edge=mapRelation.inverse().get(g.edge_out(n).get(w));
+						String node=map.inverse().get(g.adj_out(n).get(w));
+						i++;
+	                    			if (urisHash.containsKey(edge)){
+		                			B.setEntry(v, urisHash.get(edge), -3.0);
+		                		}
+		                		if (urisHash.containsKey(node)){
+		                			B.setEntry(v, urisHash.get(node), -4.0);
+		                		}
+	                    		}
+				}
+				}*/
 	                }
 	                for (int w=0; w<g.adj_in(n).size(); w++){
-	                	String edge=mapRelation.inverse().get(g.edge_in(n).get(w));
-	                	String node=map.inverse().get(g.adj_in(n).get(w));
-	                	if (urisHash.containsKey(edge)){
-	                		B.setEntry(urisHash.get(edge), v , 1.0);
+	                	int next = g.adj_in(n).get(w);
+				String edge1=mapRelation.inverse().get(g.edge_in(n).get(w));
+	                	boolean edge1_found=false;
+				relations.add(edge1);
+				String node1=map.inverse().get(g.adj_in(n).get(w));
+	                	if (urisHash.containsKey(edge1)){
+	                		B.setEntry(v, urisHash.get(edge1) , -1.0);
+					edge1_found=true;
 	                	}
-	                	if (urisHash.containsKey(node)){
-	                		B.setEntry(urisHash.get(node), v, 2.0);
+	                	if (urisHash.containsKey(node1)){
+	                		B.setEntry(v, urisHash.get(node1) , -2.0);
 	                	}
 	                	i++;
-                    	results.add("<  "+edge+" --- "+node);
-                    	for (int l=0; l<g.adj_out(w).size(); l++){
-	                    	edge=mapRelation.inverse().get(g.edge_out(w).get(l));
-	                    	node=map.inverse().get(g.adj_out(w).get(l));
-                    		i++;
-	                    	if (urisHash.containsKey(edge) && B.getEntry(v, urisHash.get(edge))==0){
-		                		B.setEntry(v, urisHash.get(edge), -3.0);
+                    		//results.add("<  "+edge1+" --- "+node1);
+                    		for (int l=0; l<g.adj_out(next).size(); l++){
+	                    		String edge2=mapRelation.inverse().get(g.edge_out(next).get(l));
+	                    		String node2=map.inverse().get(g.adj_out(next).get(l));
+                    			i++;
+	                    		if (urisHash.containsKey(edge2) && B.getEntry(v, urisHash.get(edge2))==0){
+		                		B.setEntry(v, urisHash.get(edge2), -3.0);
+						if (edge1_found==true){
+							B.setEntry(urisHash.get(edge1), urisHash.get(edge2), -2.0);
+						}
 		                	}
-	                    	if (urisHash.containsKey(node) && (int)B.getEntry(v, urisHash.get(node))==0){
-		                		B.setEntry(v, urisHash.get(node), -4.0);
+	                    		if (urisHash.containsKey(node2) && B.getEntry(v, urisHash.get(node2))==0){
+		                		B.setEntry(v, urisHash.get(node2), -4.0);
+						if (edge1_found==true){
+                                                        B.setEntry(urisHash.get(edge1), urisHash.get(node2), -3.0);
+                                                }
 		                	}
-	                    	//System.out.println("    "+mapOut.get(l));
-	                    	results.add("<<    "+edge+" --- "+node);
-	                    	//big.addEdge(v, l);
-	                    }
-                    }
+	                    		//results.add("<<    "+edge2+" --- "+node2);
+	                	}
+                    	}
 	        	}
+			}
 	        }
 	        long estimatedTime = System.currentTimeMillis() - startTime;
 	        for (String s: results){
 	        	System.out.println(s);
 	        }
-	        System.out.println("Time"+estimatedTime);
-	        System.out.println("Traversed edges"+i);
-	        
-	        for (int m=0; m<uris.length; m++){
-                for (int n=0; n<uris.length; n++){
-                                System.out.print(B.getEntry(m, n)+", ");
-                }
-                System.out.println("");
-	        }
+	        System.out.println("Time "+estimatedTime);
+	        System.out.println("Traversed edges "+i);
+	        System.out.println("Number relations "+relations.size());
+	        //for (int m=0; m<uris.length; m++){
+                //	for (int n=0; n<uris.length; n++){
+                //                System.out.print(B.getEntry(m, n)+", ");
+                //	}
+                //	System.out.println("");
+	        //}
         return B;
 	}
 	
@@ -263,9 +287,10 @@ public class Index {
 					}	
 				}	
 			} else {
-				Object s = map.get(next.getSubject().toString());
-				Object p = mapRelation.get(next.getPredicate().toString());
+				Integer s = map.get(next.getSubject().toString());
+				Integer p = mapRelation.get(next.getPredicate().toString());
 				if (s!=null){
+					g.addEdge(s, p);
 					//printStreamR1.print(s + " " + p + " 1\n");
 				}
 			}
@@ -274,6 +299,6 @@ public class Index {
 		
 		rowI=i;
 		rowR=r;
-     
+ 		System.out.println("Number triples "+j);    
 	}
 }
