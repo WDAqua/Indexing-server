@@ -1,4 +1,4 @@
-package eu.wdaqua.core0.Server;
+package eu.wdaqua.core0.server;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -34,7 +34,6 @@ public class Index {
 	
 	private BiMap<String, Integer> map = HashBiMap.create();
 	private BiMap<String, Integer> mapRelation = HashBiMap.create();
-	private CompColMatrix matrixIndex;
 	private int rowI;
 	private int rowR;
 	

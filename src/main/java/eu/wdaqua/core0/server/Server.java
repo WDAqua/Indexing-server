@@ -1,4 +1,4 @@
-package eu.wdaqua.core0.Server;
+package eu.wdaqua.core0.server;
 import java.net.*;
 
 import org.apache.commons.math3.linear.OpenMapRealMatrix;
