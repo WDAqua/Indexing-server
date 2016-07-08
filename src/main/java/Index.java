@@ -9,7 +9,10 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 //Java wrapper around octave
@@ -37,10 +40,14 @@ import java.util.HashSet;
 
 import algorithms.Digraph;
 import algorithms.In;
+import com.google.common.collect.Table;
+import com.google.common.collect.HashBasedTable;
+
+import connection.Connection;
 
 public class Index {
 	
-	String dump = "/home_expes/dd77474h/dump-en-P-C.nt";
+	String dump = "/home_expes/dd77474h/dbpedia_2016/dump-en-P-CC.ttl";
 	//String dump = "/home_expes/dd77474h/test_small.nt";
 	
 	private BiMap<String, Integer> map = HashBiMap.create();
@@ -55,14 +62,15 @@ public class Index {
 	
 	private Digraph g;
 	
-	public OpenMapRealMatrix get(String[] uris) throws IllegalArgumentException, FileNotFoundException{
+	public Connection get(String[] uris) throws IllegalArgumentException, FileNotFoundException{
 		HashMap<String,Integer> urisHash = new HashMap<String, Integer>();
 		for (int l=0; l < uris.length; l++){
 			urisHash.put(uris[l],l);
 		}
 		
 		long startTime = System.currentTimeMillis();
-		OpenMapRealMatrix B = new  OpenMapRealMatrix(uris.length,uris.length);
+		Connection c = new Connection();
+		//OpenMapRealMatrix B = new  OpenMapRealMatrix(uris.length,uris.length);
 		int i=0;
         ArrayList<String> results=new ArrayList<String>();
         //Random rand = new Random();
@@ -82,11 +90,11 @@ public class Index {
 				String node1=map.inverse().get(g.adj_out(n).get(w));
 				boolean node1_found=false;
 	                	if (urisHash.containsKey(edge1)){
-	                		B.setEntry(v, urisHash.get(edge1), 1.0);
+	                		c.add(v, urisHash.get(edge1), 1);
 					edge1_found=true;
 	                	}
 	                	if (urisHash.containsKey(node1)){
-	                		B.setEntry(v, urisHash.get(node1), 2.0);
+	                		c.add(v, urisHash.get(node1), 2);
 					node1_found=true;
 	                	}
 	                	//results.add("   "+edge1+" --- "+node1);
@@ -94,16 +102,16 @@ public class Index {
 	                    		String edge2=mapRelation.inverse().get(g.edge_out(next).get(l));
 	                    		String node2=map.inverse().get(g.adj_out(next).get(l));
 	                    		i++;
-	                    		if (urisHash.containsKey(edge2) && B.getEntry(v, urisHash.get(edge2))==0){
-		                		B.setEntry(v, urisHash.get(edge2), 3.0);
-						if (edge1_found==true && B.getEntry(urisHash.get(edge1), urisHash.get(edge2))==0){
-							B.setEntry(urisHash.get(edge1), urisHash.get(edge2), 2.0);
+	                    		if (urisHash.containsKey(edge2)){
+						c.add(v, urisHash.get(edge2), 3);
+						if (edge1_found==true){
+							c.add(urisHash.get(edge1), urisHash.get(edge2), 2);
 						}
 		                	}
-		                	if (urisHash.containsKey(node2) && B.getEntry(v, urisHash.get(node2))==0){
-		                		B.setEntry(v, urisHash.get(node2), 4.0);
-						if (edge1_found==true && B.getEntry(urisHash.get(edge1), urisHash.get(node2))==0){
-                                                        B.setEntry(urisHash.get(edge1), urisHash.get(node2), 3.0);
+		                	if (urisHash.containsKey(node2)){
+						c.add(v, urisHash.get(node2), 4);
+						if (edge1_found==true){
+							c.add(urisHash.get(edge1), urisHash.get(node2), 3);
                                                 }
 		                	}
 	                    	}
@@ -133,11 +141,11 @@ public class Index {
 				relations.add(edge1);
 				String node1=map.inverse().get(g.adj_in(n).get(w));
 	                	if (urisHash.containsKey(edge1)){
-	                		B.setEntry(v, urisHash.get(edge1) , -1.0);
+					c.add(v, urisHash.get(edge1), -1);
 					edge1_found=true;
 	                	}
 	                	if (urisHash.containsKey(node1)){
-	                		B.setEntry(v, urisHash.get(node1) , -2.0);
+	                		c.add(v, urisHash.get(node1), -2);
 	                	}
 	                	i++;
                     		//results.add("<  "+edge1+" --- "+node1);
@@ -145,16 +153,16 @@ public class Index {
 	                    		String edge2=mapRelation.inverse().get(g.edge_out(next).get(l));
 	                    		String node2=map.inverse().get(g.adj_out(next).get(l));
                     			i++;
-	                    		if (urisHash.containsKey(edge2) && B.getEntry(v, urisHash.get(edge2))==0){
-		                		B.setEntry(v, urisHash.get(edge2), -3.0);
+	                    		if (urisHash.containsKey(edge2)){
+		                		c.add(v, urisHash.get(edge2), -3);
 						if (edge1_found==true){
-							B.setEntry(urisHash.get(edge1), urisHash.get(edge2), -2.0);
+							c.add(urisHash.get(edge1), urisHash.get(edge2), -2);
 						}
 		                	}
-	                    		if (urisHash.containsKey(node2) && B.getEntry(v, urisHash.get(node2))==0){
-		                		B.setEntry(v, urisHash.get(node2), -4.0);
+	                    		if (urisHash.containsKey(node2)){
+						c.add(v, urisHash.get(node2), -4);
 						if (edge1_found==true){
-                                                        B.setEntry(urisHash.get(edge1), urisHash.get(node2), -3.0);
+							c.add(urisHash.get(edge1), urisHash.get(node2), -3);
                                                 }
 		                	}
 	                    		//results.add("<<    "+edge2+" --- "+node2);
@@ -170,13 +178,7 @@ public class Index {
 	        System.out.println("Time "+estimatedTime);
 	        System.out.println("Traversed edges "+i);
 	        System.out.println("Number relations "+relations.size());
-	        //for (int m=0; m<uris.length; m++){
-                //	for (int n=0; n<uris.length; n++){
-                //                System.out.print(B.getEntry(m, n)+", ");
-                //	}
-                //	System.out.println("");
-	        //}
-        return B;
+        return c;
 	}
 	
 	
@@ -302,3 +304,5 @@ public class Index {
  		System.out.println("Number triples "+j);    
 	}
 }
+
+
