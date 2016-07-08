@@ -1,13 +1,16 @@
+package connection;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.io.Serializable;
 
-public class Connection{
-	private Map<HashSet<Integer>, ArrayList<Integer>> list = new HashMap<HashSet<Integer>, ArrayList<Integer>>();
+public class Connection implements Serializable{
+	private HashMap<ArrayList<Integer>, ArrayList<Integer>> list = new HashMap<ArrayList<Integer>, ArrayList<Integer>>();
 	
-	void add(int i, int j, int k){
-		HashSet<Integer> s = new HashSet<Integer>();
+	public void add(int i, int j, int k){
+		ArrayList<Integer> s = new ArrayList<Integer>();
 		s.add(i);
 		s.add(j);
 		if (list.containsKey(s)==false){
@@ -21,8 +24,8 @@ public class Connection{
 		}
 	}
 	
-	boolean equals(int i, int j, int k){
-		HashSet<Integer> s = new HashSet<Integer>();
+	public boolean equals(int i, int j, int k){
+		ArrayList<Integer> s = new ArrayList<Integer>();
 		s.add(i);
 		s.add(j);
 		if (list.containsKey(s)==false && k==0){

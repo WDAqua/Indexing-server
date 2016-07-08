@@ -5,6 +5,8 @@ import org.apache.commons.math3.linear.OpenMapRealMatrix;
 import dk.ange.octave.type.OctaveObject;
 
 import java.io.*;
+
+import connection.Connection;
  
 public class Server2 {
 	private static boolean acceptMore = true;
@@ -29,7 +31,7 @@ public class Server2 {
 				ObjectOutputStream out = new ObjectOutputStream(os);
 				try {
 					System.out.println("Computing");
-					OpenMapRealMatrix result = i.get(URI);
+					Connection result = i.get(URI);
 		        	out.writeObject(result);
 				} catch (IllegalArgumentException e){
 					System.out.println(e);
