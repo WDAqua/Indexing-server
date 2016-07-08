@@ -1,4 +1,4 @@
-package connection;
+package eu.wdaqua.core0.connection;
 
 import java.util.ArrayList;
 import java.util.HashMap;

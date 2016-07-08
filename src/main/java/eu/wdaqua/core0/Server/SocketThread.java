@@ -1,3 +1,4 @@
+package eu.wdaqua.core0.Server;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;

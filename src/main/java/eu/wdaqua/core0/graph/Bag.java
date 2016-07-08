@@ -1,4 +1,4 @@
-package algorithms;
+package eu.wdaqua.core0.graph;
 
 import java.util.Iterator;
 import java.util.NoSuchElementException;

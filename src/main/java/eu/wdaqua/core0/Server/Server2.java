@@ -1,12 +1,12 @@
+package eu.wdaqua.core0.Server;
 import java.net.*;
 
 import org.apache.commons.math3.linear.OpenMapRealMatrix;
 
 import dk.ange.octave.type.OctaveObject;
+import eu.wdaqua.core0.connection.Connection;
 
 import java.io.*;
-
-import connection.Connection;
  
 public class Server2 {
 	private static boolean acceptMore = true;

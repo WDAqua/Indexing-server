@@ -1,3 +1,4 @@
+package eu.wdaqua.core0.Server;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -19,6 +20,9 @@ import java.util.concurrent.Executors;
 import dk.ange.octave.OctaveEngine;
 import dk.ange.octave.OctaveEngineFactory;
 import dk.ange.octave.type.OctaveDouble;
+import eu.wdaqua.core0.connection.Connection;
+import eu.wdaqua.core0.graph.Digraph;
+import eu.wdaqua.core0.graph.In;
 //Compressed column storage implementation
 import no.uib.cipr.matrix.io.MatrixVectorReader;
 import no.uib.cipr.matrix.sparse.CompColMatrix;
@@ -38,12 +42,8 @@ import org.apache.log4j.BasicConfigurator;
 //import org.jgrapht.graph.DefaultEdge;
 import java.util.HashSet;
 
-import algorithms.Digraph;
-import algorithms.In;
 import com.google.common.collect.Table;
 import com.google.common.collect.HashBasedTable;
-
-import connection.Connection;
 
 public class Index {
 	

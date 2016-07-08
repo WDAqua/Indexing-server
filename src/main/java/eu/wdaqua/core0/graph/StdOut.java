@@ -1,4 +1,4 @@
-package algorithms;
+package eu.wdaqua.core0.graph;
 
 /******************************************************************************
  *  Compilation:  javac StdOut.java
