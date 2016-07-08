@@ -8,7 +8,7 @@ import eu.wdaqua.core0.connection.Connection;
 
 import java.io.*;
  
-public class Server2 {
+public class Server {
 	private static boolean acceptMore = true;
     public static void main(String[] args) throws IOException, ClassNotFoundException {
     	

@@ -1,31 +1,17 @@
 package eu.wdaqua.core0.Server;
-import java.io.BufferedReader;
+
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.PrintStream;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 //Java wrapper around octave
-import dk.ange.octave.OctaveEngine;
-import dk.ange.octave.OctaveEngineFactory;
-import dk.ange.octave.type.OctaveDouble;
 import eu.wdaqua.core0.connection.Connection;
 import eu.wdaqua.core0.graph.Digraph;
 import eu.wdaqua.core0.graph.In;
-//Compressed column storage implementation
-import no.uib.cipr.matrix.io.MatrixVectorReader;
-import no.uib.cipr.matrix.sparse.CompColMatrix;
 //Sparse matrix implementation
 import org.apache.commons.math3.linear.OpenMapRealMatrix;
 import org.apache.jena.ext.com.google.common.collect.BiMap;
@@ -37,10 +23,6 @@ import org.apache.jena.riot.lang.PipedRDFIterator;
 import org.apache.jena.riot.lang.PipedRDFStream;
 import org.apache.jena.riot.lang.PipedTriplesStream;
 import org.apache.log4j.BasicConfigurator;
-//import org.jgrapht.DirectedGraph;
-//import org.jgrapht.graph.DefaultDirectedGraph;
-//import org.jgrapht.graph.DefaultEdge;
-import java.util.HashSet;
 
 import com.google.common.collect.Table;
 import com.google.common.collect.HashBasedTable;
@@ -51,12 +33,8 @@ public class Index {
 	//String dump = "/home_expes/dd77474h/test_small.nt";
 	
 	private BiMap<String, Integer> map = HashBiMap.create();
-	// ArrayList<String> mapOut = new ArrayList<String>();
 	private BiMap<String, Integer> mapRelation = HashBiMap.create();
-	//private HashMap<String,Integer> mapRelation = new HashMap<String,Integer>();
-	//private ArrayList<String> mapOutRelation = new ArrayList<String>();
 	private CompColMatrix matrixIndex;
-	private OctaveEngine octave;
 	private int rowI;
 	private int rowR;
 	
@@ -70,18 +48,14 @@ public class Index {
 		
 		long startTime = System.currentTimeMillis();
 		Connection c = new Connection();
-		//OpenMapRealMatrix B = new  OpenMapRealMatrix(uris.length,uris.length);
 		int i=0;
         ArrayList<String> results=new ArrayList<String>();
-        //Random rand = new Random();
         HashSet<String> relations = new HashSet<String>();
 	for (int v = 0; v < uris.length; v++) {
         	if (map.containsKey(uris[v])){
 		String s=uris[v].replace("http://dbpedia.org/ontology/","");
                 if (Character.isUpperCase(s.charAt(0))==false){
 	        	int n=map.get(uris[v]);
-	        		//results.add(map.inverse().get(n));
-	        		//System.out.println(v);
 	                for (int w=0; w < g.adj_out(n).size(); w++) {
 	                	int next = g.adj_out(n).get(w);
 				String edge1=mapRelation.inverse().get(g.edge_out(n).get(w));
@@ -97,7 +71,6 @@ public class Index {
 	                		c.add(v, urisHash.get(node1), 2);
 					node1_found=true;
 	                	}
-	                	//results.add("   "+edge1+" --- "+node1);
 	                	for (int l=0; l<g.adj_out(next).size(); l++){
 	                    		String edge2=mapRelation.inverse().get(g.edge_out(next).get(l));
 	                    		String node2=map.inverse().get(g.adj_out(next).get(l));
