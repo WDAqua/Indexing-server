@@ -14,6 +14,7 @@ import eu.wdaqua.core0.graph.Digraph;
 import eu.wdaqua.core0.graph.In;
 //Sparse matrix implementation
 import org.apache.commons.math3.linear.OpenMapRealMatrix;
+import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.apache.jena.ext.com.google.common.collect.BiMap;
 import org.apache.jena.ext.com.google.common.collect.HashBiMap;
 import org.apache.jena.graph.Triple;
@@ -53,7 +54,7 @@ public class Index {
 	for (int v = 0; v < uris.length; v++) {
         	if (map.containsKey(uris[v])){
 		String s=uris[v].replace("http://dbpedia.org/ontology/","");
-                if (Character.isUpperCase(s.charAt(0))==false){
+                if (Character.isUpperCase(s.charAt(0))==false && uris[v].contains("http://wdaqua/")==false){ //Check that it is not a class
 	        	int n=map.get(uris[v]);
 	                for (int w=0; w < g.adj_out(n).size(); w++) {
 	                	int next = g.adj_out(n).get(w);
@@ -164,6 +165,9 @@ public class Index {
 	}
 	
 	public void index() throws IOException, ClassNotFoundException{
+		//Define some extra classes
+		
+		
 		org.apache.log4j.Logger.getRootLogger().setLevel(org.apache.log4j.Level.OFF);
 		//create the index folder
 		File folder = new File("index/");
@@ -188,6 +192,9 @@ public class Index {
         Integer i=1;
         Integer before=0;
         int r=1;
+        map.put("http://wdaqua/Date", i);
+        i++;
+        
         //mapOut.add("null");
         //mapOutRelation.add("add");
         System.out.println("Parse the dump and search for all subjects objects and relations ...");
@@ -215,6 +222,10 @@ public class Index {
 	    	    	//mapOut.add(next.getObject().toString());
 	    	    	i++;
             	}
+            }
+            //For each literal create an empty node
+            if (next.getObject().isLiteral()==true && next.getObject().getLiteralDatatype()==XSDDatatype.XSDdate){
+	    	    	i++;
             }
 	    	if(i % 1000000 == 0) {
 	    		if (i!=before){
@@ -246,6 +257,7 @@ public class Index {
 		
 		int j=0;
 		System.out.println("Parsing the dump ...");
+		int blank=1;
 		while ( iter.hasNext()){
 			Triple next = iter.next();
 			if (next.getObject().isURI()){
@@ -258,14 +270,23 @@ public class Index {
 						j++;
 					} else {
 						j++;
-					}	
-				}	
+					}
+				}
+				
 			} else {
 				Integer s = map.get(next.getSubject().toString());
 				Integer p = mapRelation.get(next.getPredicate().toString());
 				if (s!=null){
 					g.addEdge(s, p);
 					//printStreamR1.print(s + " " + p + " 1\n");
+					//Consider the case where the object is a literal
+					if (next.getObject().isLiteral()){
+						if (next.getObject().getLiteralDatatype()==XSDDatatype.XSDdate){
+							g.addEdge(s,p,i-blank);
+							g.addEdge(i-blank, mapRelation.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), map.get("http://wdaqua/Date"));
+							blank++;
+						}
+					}
 				}
 			}
 		}
@@ -276,5 +297,4 @@ public class Index {
  		System.out.println("Number triples "+j);    
 	}
 }
-
 
