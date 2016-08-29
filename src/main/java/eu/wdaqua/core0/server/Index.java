@@ -30,7 +30,7 @@ import com.google.common.collect.HashBasedTable;
 
 public class Index {
 	
-	String dump = "/home_expes/dd77474h/dbpedia_2016/dump-en-P-CC.ttl";
+	String dump = "/home_expes/dd77474h/dbpedia_2016/dump-en-P-CC-yago.ttl";
 	//String dump = "/home_expes/dd77474h/test_small.nt";
 	
 	private BiMap<String, Integer> map = HashBiMap.create();
@@ -194,6 +194,12 @@ public class Index {
         int r=1;
         map.put("http://wdaqua/Date", i);
         i++;
+	map.put("http://wdaqua/dateLiteral", i);
+        i++;
+        map.put("http://wdaqua/Number",i);
+        i++;
+	map.put("http://wdaqua/literalNumber",i);
+        i++;
         
         //mapOut.add("null");
         //mapOutRelation.add("add");
@@ -223,10 +229,15 @@ public class Index {
 	    	    	i++;
             	}
             }
+/*
             //For each literal create an empty node
-            if (next.getObject().isLiteral()==true && next.getObject().getLiteralDatatype()==XSDDatatype.XSDdate){
+            if (next.getObject().isLiteral()==true && (next.getObject().getLiteralDatatype()==XSDDatatype.XSDdate
+            		|| next.getObject().getLiteralDatatype()==XSDDatatype.XSDdouble
+            		|| next.getObject().getLiteralDatatype()==XSDDatatype.XSDdecimal
+            		|| next.getObject().getLiteralDatatype()==XSDDatatype.XSDinteger)){
 	    	    	i++;
             }
+*/
 	    	if(i % 1000000 == 0) {
 	    		if (i!=before){
 	 	    		System.out.println(i);
@@ -253,11 +264,10 @@ public class Index {
         };
         executor.submit(parser);
         
-        
-		
+        	g.addEdge(map.get("http://wdaqua/dateLiteral"), mapRelation.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), map.get("http://wdaqua/Date"));
+		g.addEdge(map.get("http://wdaqua/literalNumber"), mapRelation.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), map.get("http://wdaqua/Number"));	
 		int j=0;
 		System.out.println("Parsing the dump ...");
-		int blank=1;
 		while ( iter.hasNext()){
 			Triple next = iter.next();
 			if (next.getObject().isURI()){
@@ -282,9 +292,12 @@ public class Index {
 					//Consider the case where the object is a literal
 					if (next.getObject().isLiteral()){
 						if (next.getObject().getLiteralDatatype()==XSDDatatype.XSDdate){
-							g.addEdge(s,p,i-blank);
-							g.addEdge(i-blank, mapRelation.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), map.get("http://wdaqua/Date"));
-							blank++;
+							g.addEdge(s,p,map.get("http://wdaqua/dateLiteral"));
+						}
+						if (next.getObject().getLiteralDatatype()==XSDDatatype.XSDdouble
+			            		|| next.getObject().getLiteralDatatype()==XSDDatatype.XSDdecimal
+			            		|| next.getObject().getLiteralDatatype()==XSDDatatype.XSDinteger){
+							g.addEdge(s,p,map.get("http://wdaqua/literalNumber"));
 						}
 					}
 				}

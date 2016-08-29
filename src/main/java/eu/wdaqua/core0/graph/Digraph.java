@@ -193,7 +193,8 @@ public class Digraph {
     public void addEdge(int v, int w) {
         validateVertex(v);
         validateVertex(w);
-        adj_out[v].add(w);
+        //Think to validate also the edge, i.e. check if it already exists
+	adj_out[v].add(w);
         adj_in[w].add(v);
         //indegree[w]++;
         E++;
