@@ -28,10 +28,16 @@ import org.apache.log4j.BasicConfigurator;
 import com.google.common.collect.Table;
 import com.google.common.collect.HashBasedTable;
 
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
+
 public class Index {
 	
-	String dump = "/home_expes/dd77474h/dbpedia_2016/dump-en-P-CC-yago.ttl";
-	//String dump = "/home_expes/dd77474h/test_small.nt";
+	//String dump = "/home_expes/dd77474h/wikidata/wikidata-instances-old.nt";
+	String dump = "/home_expes/dd77474h/wikidata/wikidata_change2.ttl";
+        //String dump = "/home_expes/dd77474h/wikidata/out";
+        //String dump = "/home_expes/dd77474h/dbpedia_2016/dump-en-P-CC.ttl";
+        //String dump = "/home_expes/dd77474h/test_small.nt";
 	
 	private BiMap<String, Integer> map = HashBiMap.create();
 	private BiMap<String, Integer> mapRelation = HashBiMap.create();
@@ -166,9 +172,7 @@ public class Index {
 	
 	public void index() throws IOException, ClassNotFoundException{
 		//Define some extra classes
-		
-		
-		org.apache.log4j.Logger.getRootLogger().setLevel(org.apache.log4j.Level.OFF);
+		//org.apache.log4j.Logger.getRootLogger().setLevel(org.apache.log4j.Level.OFF);
 		//create the index folder
 		File folder = new File("index/");
 		if (!folder.exists()) folder.mkdir();
@@ -200,13 +204,20 @@ public class Index {
         i++;
 	map.put("http://wdaqua/literalNumber",i);
         i++;
-        
+        mapRelation.put("http://www.w3.org/1999/02/22-rdf-syntax-ns#type",r);
+        r++;
+ 
         //mapOut.add("null");
         //mapOutRelation.add("add");
         System.out.println("Parse the dump and search for all subjects objects and relations ...");
         System.out.println("If this slows down, and does not come to an end, you probably need more RAM!");
+        int l=0;
         while (iter.hasNext()) {
+            l++;
             Triple next = iter.next();
+            //if (next.getPredicate().toString().contains("http://www.wikidata.org/prop/direct/") || next.getPredicate().toString().contains("http://www.w3.org/1999/02/22-rdf-syntax-ns#type") ){
+            if (next.getPredicate().toString().contains("http://www.wikidata.org/prop/direct/") ){
+            //System.out.println(next.getSubject().toString()+", "+next.getPredicate().toString()+", "+next.getObject().toString());
             // Look if subject already encounterd
             if (map.containsKey(next.getSubject().toString())==false){
             	map.put(next.getSubject().toString(),i);
@@ -245,6 +256,8 @@ public class Index {
 	    		before=i;
 	    	}
         }
+        }
+        System.out.println("kkkkk"+l);
         System.out.println("Number resources: "+i);
         System.out.println("Number relations: "+r);
         executor.shutdownNow();
@@ -270,7 +283,8 @@ public class Index {
 		System.out.println("Parsing the dump ...");
 		while ( iter.hasNext()){
 			Triple next = iter.next();
-			if (next.getObject().isURI()){
+			if (next.getPredicate().toString().contains("http://www.wikidata.org/prop/direct/") ){
+                        if (next.getObject().isURI()){
 				Integer s = map.get(next.getSubject().toString());
 				Integer p = mapRelation.get(next.getPredicate().toString()); 
 				Integer o = map.get(next.getObject().toString());
@@ -302,6 +316,7 @@ public class Index {
 					}
 				}
 			}
+                        }
 		}
 		executor.shutdown();
 		
