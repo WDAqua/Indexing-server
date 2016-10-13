@@ -31,7 +31,7 @@ public class Index {
 	
 	
 	String octavePath="/usr/bin/octave";
-	String dump = "/home_expes/dd77474h/dump.nt";
+	String dump = "/home_expes/dd77474h/dbpedia_2016/dump-en-P-C.ttl";
 	
 	
 	private HashMap<String,Integer> mapIn = new HashMap<String,Integer>();
