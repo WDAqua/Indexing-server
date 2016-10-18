@@ -33,18 +33,23 @@ import org.apache.jena.rdf.model.ModelFactory;
 
 public class Index {
 	
-	//String dump = "/home_expes/dd77474h/wikidata/wikidata-instances-old.nt";
-	String dump = "/home_expes/dd77474h/wikidata/wikidata_change2.ttl";
-        //String dump = "/home_expes/dd77474h/wikidata/out";
-        //String dump = "/home_expes/dd77474h/dbpedia_2016/dump-en-P-CC.ttl";
-        //String dump = "/home_expes/dd77474h/test_small.nt";
+	String[] dump = new String[1];
 	
 	private BiMap<String, Integer> map = HashBiMap.create();
 	private BiMap<String, Integer> mapRelation = HashBiMap.create();
 	private int rowI;
 	private int rowR;
-	
 	private Digraph g;
+
+	Index(){
+		dump[0]="/home_expes/dd77474h/dbpedia_2016/dump-en-P-CC-yago.ttl";
+		//String dump = "/home_expes/dd77474h/test_small.nt";
+                //String dump = "/home_expes/dd77474h/wikidata/wikidata-instances-old.nt";
+                String dump = "/home_expes/dd77474h/wikidata/wikidata_change2.ttl";
+                //String dump = "/home_expes/dd77474h/wikidata/out";
+                //String dump = "/home_expes/dd77474h/dbpedia_2016/dump-en-P-CC.ttl";
+                //String dump = "/home_expes/dd77474h/test_small.nt";
+	}
 	
 	public Connection get(String[] uris) throws IllegalArgumentException, FileNotFoundException{
 		HashMap<String,Integer> urisHash = new HashMap<String, Integer>();
@@ -171,26 +176,40 @@ public class Index {
 	}
 	
 	public void index() throws IOException, ClassNotFoundException{
+<<<<<<< HEAD
 		//Define some extra classes
 		//org.apache.log4j.Logger.getRootLogger().setLevel(org.apache.log4j.Level.OFF);
 		//create the index folder
 		File folder = new File("index/");
 		if (!folder.exists()) folder.mkdir();
-		//Parse the labels file
-		//Using example: https://github.com/apache/jena/blob/master/jena-arq/src-examples/arq/examples/riot/ExRIOT_6.java
-		PipedRDFIterator<Triple> iter = new PipedRDFIterator<Triple>();
-        final PipedRDFStream<Triple> inputStream = new PipedTriplesStream(iter);
-        // PipedRDFStream and PipedRDFIterator need to be on different threads
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        // Create a runnable for our parser thread
-        Runnable parser = new Runnable() {
-            @Override
-            public void run() {
-                // Call the parsing process.
-                RDFDataMgr.parse(inputStream, dump);
-            }
-        };
+=======
+		//Add some uri for literals
+		Integer i=1;
+		Integer before=0;
+		int r=1;
+		map.put("http://wdaqua/Date", i);
+		i++;
+		map.put("http://wdaqua/dateLiteral", i);
+		i++;
+		map.put("http://wdaqua/Number",i);
+		i++;
+		map.put("http://wdaqua/literalNumber",i);
+		i++;
 
+>>>>>>> 8d5301132b9d9897534289f76abd44a17fbbd881
+		//Parse the labels file
+		for (int k=0; k< dump.length; k++) {
+			final String d = dump[k];
+			PipedRDFIterator<Triple> iter = parse(d);
+			System.out.println("Parse the dump and search for all subjects objects and relations ...");
+			while (iter.hasNext()) {
+				Triple next = iter.next();
+				// Look if subject already encounterd
+				if (map.containsKey(next.getSubject().toString()) == false) {
+					map.put(next.getSubject().toString(), i);
+					i++;
+
+<<<<<<< HEAD
         // Start the parser on another thread
         executor.submit(parser);
         Integer i=1;
@@ -258,28 +277,37 @@ public class Index {
         }
         }
         System.out.println("kkkkk"+l);
+=======
+				}
+				//Look if the relation was already encountered
+				if (mapRelation.containsKey(next.getPredicate().toString()) == false) {
+					mapRelation.put(next.getPredicate().toString(), r);
+					r++;
+				}
+				//Look if object is an uri and was already encountered
+				if (next.getObject().isURI() == true) {
+					if (map.containsKey(next.getObject().toString()) == false) {
+						map.put(next.getObject().toString(), i);
+						i++;
+					}
+				}
+				if (i % 1000000 == 0) {
+					if (i != before) {
+						System.out.println(i);
+					}
+					before = i;
+				}
+			}
+		}
+>>>>>>> 8d5301132b9d9897534289f76abd44a17fbbd881
         System.out.println("Number resources: "+i);
         System.out.println("Number relations: "+r);
-        executor.shutdownNow();
-        
-        
-        g = new Digraph(i);
-        
-        iter = new PipedRDFIterator<Triple>();
-        final PipedRDFStream<Triple> inputStream2 = new PipedTriplesStream(iter);
-        executor = Executors.newSingleThreadExecutor();
-        
-        parser = new Runnable() {
-            @Override
-            public void run() {
-            	RDFDataMgr.parse(inputStream2, dump);
-            }
-        };
-        executor.submit(parser);
-        
-        	g.addEdge(map.get("http://wdaqua/dateLiteral"), mapRelation.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), map.get("http://wdaqua/Date"));
-		g.addEdge(map.get("http://wdaqua/literalNumber"), mapRelation.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), map.get("http://wdaqua/Number"));	
+
+		g = new Digraph(i);
+		g.addEdge(map.get("http://wdaqua/dateLiteral"), mapRelation.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), map.get("http://wdaqua/Date"));
+		g.addEdge(map.get("http://wdaqua/literalNumber"), mapRelation.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), map.get("http://wdaqua/Number"));
 		int j=0;
+<<<<<<< HEAD
 		System.out.println("Parsing the dump ...");
 		while ( iter.hasNext()){
 			Triple next = iter.next();
@@ -307,22 +335,72 @@ public class Index {
 					if (next.getObject().isLiteral()){
 						if (next.getObject().getLiteralDatatype()==XSDDatatype.XSDdate){
 							g.addEdge(s,p,map.get("http://wdaqua/dateLiteral"));
+=======
+
+		for (int k=0; k< dump.length; k++) {
+			final String d = dump[k];
+			PipedRDFIterator<Triple> iter = parse(d);
+			System.out.println("Parsing the dump ...");
+			while ( iter.hasNext()){
+				Triple next = iter.next();
+				if (next.getObject().isURI()){
+					Integer s = map.get(next.getSubject().toString());
+					Integer p = mapRelation.get(next.getPredicate().toString());
+					Integer o = map.get(next.getObject().toString());
+					if (s!=null){
+						if (s!=null && o!=null){
+							g.addEdge(s, p, o);
+							j++;
+						} else {
+							j++;
+>>>>>>> 8d5301132b9d9897534289f76abd44a17fbbd881
 						}
-						if (next.getObject().getLiteralDatatype()==XSDDatatype.XSDdouble
-			            		|| next.getObject().getLiteralDatatype()==XSDDatatype.XSDdecimal
-			            		|| next.getObject().getLiteralDatatype()==XSDDatatype.XSDinteger){
-							g.addEdge(s,p,map.get("http://wdaqua/literalNumber"));
+					}
+				} else {
+					Integer s = map.get(next.getSubject().toString());
+					Integer p = mapRelation.get(next.getPredicate().toString());
+					if (s!=null){
+						g.addEdge(s, p);
+						//Consider the case where the object is a literal
+						if (next.getObject().isLiteral()){
+							if (next.getObject().getLiteralDatatype()==XSDDatatype.XSDdate
+									|| next.getObject().getLiteralDatatype()==XSDDatatype.XSDdateTime){
+								g.addEdge(s,p,map.get("http://wdaqua/dateLiteral"));
+							}
+							if (next.getObject().getLiteralDatatype()==XSDDatatype.XSDdouble
+									|| next.getObject().getLiteralDatatype()==XSDDatatype.XSDdecimal
+									|| next.getObject().getLiteralDatatype()==XSDDatatype.XSDinteger){
+								g.addEdge(s,p,map.get("http://wdaqua/literalNumber"));
+							}
 						}
 					}
 				}
 			}
                         }
 		}
-		executor.shutdown();
-		
 		rowI=i;
 		rowR=r;
  		System.out.println("Number triples "+j);    
 	}
+
+	public static PipedRDFIterator<Triple> parse(final String dump){
+		PipedRDFIterator<Triple> iter = new PipedRDFIterator<Triple>();
+		final PipedRDFStream<Triple> inputStream = new PipedTriplesStream(iter);
+		// PipedRDFStream and PipedRDFIterator need to be on different threads
+		ExecutorService executor = Executors.newSingleThreadExecutor();
+		// Create a runnable for our parser thread
+		Runnable parser = new Runnable() {
+			@Override
+			public void run() {
+				// Call the parsing process.
+				RDFDataMgr.parse(inputStream, dump);
+			}
+		};
+
+		// Start the parser on another thread
+		executor.submit(parser);
+		return iter;
+	}
+
 }
 
