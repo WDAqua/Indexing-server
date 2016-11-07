@@ -32,9 +32,15 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import static java.lang.Integer.min;
 
+import org.rdfhdt.hdt.hdt.HDT;
+import org.rdfhdt.hdt.hdt.HDTManager;
+import org.rdfhdt.hdt.triples.IteratorTripleString;
+import org.rdfhdt.hdt.triples.TripleString;
+import org.rdfhdt.hdt.enums.TripleComponentRole;
+
 public class Index {
 	
-	String[] dump = new String[2];
+	String[] dump = new String[1];
 
 	private BiMap<String, Integer> map = HashBiMap.create();
 	private BiMap<String, Integer> mapRelation = HashBiMap.create();
@@ -43,8 +49,8 @@ public class Index {
 	private Digraph g;
 
 	Index(){
-		dump[1]="/home_expes/dd77474h/dbpedia_2016/dump-en-P-CC-yago.ttl";
-		dump[0]="/home_expes/dd77474h/wikidata/wikidata_change2.ttl";
+		dump[0]="/home_expes/dd77474h/dbpedia_2016/dump-en-P-CC-yago.ttl";
+		//dump[0]="/home_expes/dd77474h/wikidata/wikidata_change2.ttl";
                 //String dump = "/home_expes/dd77474h/test_small.nt";
                 //String dump = "/home_expes/dd77474h/wikidata/wikidata-instances-old.nt";
                 //String dump = "/home_expes/dd77474h/wikidata/wikidata_change2.ttl";
@@ -172,7 +178,13 @@ public class Index {
 	}
 
 	public void index() throws IOException, ClassNotFoundException{
-		//Add some uri for literals
+                System.out.println("HDT loading ...");
+                HDTmap map1 = new HDTmap("../dbpedia_2016/dump-en-P-CC-yago.hdt");
+                //HDT hdt = HDTManager.loadHDT("../dbpedia_2016/dump-en-P-CC-yago.hdt", null);
+                System.out.println("HDT loaded!");
+                System.out.println("Id 2 "+map1.get(-1));
+                System.out.println("http://dbpedia.org/resource/Barack_Obama"+map1.get("http://dbpedia.org/resource/Barack_Obama"));
+                //Adddd some uri for literals
 		Integer i=1;
 		Integer before=0;
 		int r=1;
@@ -186,81 +198,50 @@ public class Index {
 		i++;
 		map.put("http://wdaqua/literalNumber",i);
 		i++;
-		//Parse the labels file
-		for (int k=0; k< dump.length; k++) {
-			final String d = dump[k];
-			PipedRDFIterator<Triple> iter = parse(d);
-			System.out.println("Parse the dump and search for all subjects objects and relations ...");
-			while (iter.hasNext()) {
-				Triple next = iter.next();
-				if (k!=0 || (next.getPredicate().toString().contains("http://www.wikidata.org/prop/direct/")==true
-                                    && (next.getObject().isURI()==false || next.getObject().toString().contains("http://www.wikidata.org/entity")))){
-                                //System.out.println(next.getSubject().toString() + " " + next.getPredicate().toString() + " " + next.getObject().toString() );
-                                // Look if subject already encounterd
-				if (map.containsKey(next.getSubject().toString()) == false) {
-					map.put(next.getSubject().toString(), i);
-					i++;
-				}
-				//Look if the relation was already encountered
-				if (mapRelation.containsKey(next.getPredicate().toString()) == false) {
-					mapRelation.put(next.getPredicate().toString(), r);
-					r++;
-				}
-				//Look if object is an uri and was already encountered
-				if (next.getObject().isURI() == true) {
-					if (map.containsKey(next.getObject().toString()) == false) {
-						map.put(next.getObject().toString(), i);
-						i++;
-					}
-				}
-				if (i % 1000000 == 0) {
-					if (i != before) {
-						System.out.println(i);
-					}
-					before = i;
-				}
-			}}
-		}
-		System.out.println("Number resources: "+i);
-		System.out.println("Number relations: "+r);
-
-		g = new Digraph(i);
-		g.addEdge(map.get("http://wdaqua/dateLiteral"), mapRelation.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), map.get("http://wdaqua/Date"));
-		g.addEdge(map.get("http://wdaqua/literalNumber"), mapRelation.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), map.get("http://wdaqua/Number"));
-		
+                
+                System.out.println(map1.nSubjects+map1.nObjects-map1.nShared);
+		g = new Digraph(map1.nSubjects+map1.nObjects-map1.nShared);
+		//g.addEdge(map.get("http://wdaqua/dateLiteral"), mapRelation.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), map.get("http://wdaqua/Date"));
+		//g.addEdge(map.get("http://wdaqua/literalNumber"), mapRelation.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), map.get("http://wdaqua/Number"));
+	
+                int l=0;	
                 for (int k=0; k< dump.length; k++) {
 			final String d = dump[k];
 			PipedRDFIterator<Triple> iter = parse(d);
 			System.out.println("Parsing the dump "+d+" ...");
 			while ( iter.hasNext()){
 				Triple next = iter.next();
-				if (k!=0 || next.getPredicate().toString().contains("http://www.wikidata.org/prop/direct/")==true){
+				if (k==0 || next.getPredicate().toString().contains("http://www.wikidata.org/prop/direct/")==true){
                                 if (next.getObject().isURI()){
-					Integer s = map.get(next.getSubject().toString());
-					Integer p = mapRelation.get(next.getPredicate().toString());
-					Integer o = map.get(next.getObject().toString());
-					if (s!=null && p!=null && o!=null){
+					Integer s = map1.get(next.getSubject().toString());
+					Integer p = map1.get(next.getPredicate().toString());
+					Integer o = map1.get(next.getObject().toString());
+                                        if (s!=-1 && p!=-1 && o!=-1){
 					    g.addEdge(s, p, o);
 					}
 				} else {
-					Integer s = map.get(next.getSubject().toString());
-					Integer p = mapRelation.get(next.getPredicate().toString());
-					if (s!=null && p!=null){
+					Integer s = map1.get(next.getSubject().toString());
+					Integer p = map1.get(next.getPredicate().toString());
+					if (s!=-1 && p!=-1){
 						g.addEdge(s, p);
 						//Consider the case where the object is a literal
-						if (next.getObject().isLiteral()){
-							if (next.getObject().getLiteralDatatype()==XSDDatatype.XSDdate
-									|| next.getObject().getLiteralDatatype()==XSDDatatype.XSDdateTime){
-								g.addEdge(s,p,map.get("http://wdaqua/dateLiteral"));
-							}
-							if (next.getObject().getLiteralDatatype()==XSDDatatype.XSDdouble
-									|| next.getObject().getLiteralDatatype()==XSDDatatype.XSDdecimal
-									|| next.getObject().getLiteralDatatype()==XSDDatatype.XSDinteger){
-								g.addEdge(s,p,map.get("http://wdaqua/literalNumber"));
-							}
-						}
+						//if (next.getObject().isLiteral()){
+						//	if (next.getObject().getLiteralDatatype()==XSDDatatype.XSDdate
+						//			|| next.getObject().getLiteralDatatype()==XSDDatatype.XSDdateTime){
+						//		g.addEdge(s,p,map.get("http://wdaqua/dateLiteral"));
+						//	}
+						//	if (next.getObject().getLiteralDatatype()==XSDDatatype.XSDdouble
+						//			|| next.getObject().getLiteralDatatype()==XSDDatatype.XSDdecimal
+						//			|| next.getObject().getLiteralDatatype()==XSDDatatype.XSDinteger){
+						//		g.addEdge(s,p,map.get("http://wdaqua/literalNumber"));
+						//	}
+						//}
 					}
 				}}
+                                if (l%10000==0){
+                                    System.out.println(l);
+                                }
+                                l++;
 			}
 		}
 		rowI=i;
@@ -285,5 +266,62 @@ public class Index {
 		executor.submit(parser);
 		return iter;
 	}
+    
+        public class HDTmap{
+                private HDT hdt;
+                public int nShared;
+                public int nSubjects;
+                public int nObjects;
+                private int nPredicates;
+                
+
+                HDTmap(String location) throws IOException{
+                    hdt = HDTManager.loadHDT(location, null);
+                    System.out.println(hdt.getDictionary().getNshared());
+                    nShared = (int)hdt.getDictionary().getNshared();
+                    System.out.println(nShared);
+                    nSubjects = (int)hdt.getDictionary().getNsubjects();
+                    nPredicates = (int)hdt.getDictionary().getNpredicates();
+                    nObjects = (int)hdt.getDictionary().getNobjects();
+                }
+
+                int get(String resource){
+                    int tmp = hdt.getDictionary().stringToId(resource, TripleComponentRole.SUBJECT);
+                    if (tmp != -1){
+                        return tmp;
+                    }
+                    tmp = hdt.getDictionary().stringToId(resource, TripleComponentRole.OBJECT);
+                    if (tmp != -1){
+                        if (tmp<nShared){
+                            return tmp;
+                        } else {
+                            return tmp+nSubjects-nShared;
+                        }
+                    }
+                    tmp = hdt.getDictionary().stringToId(resource, TripleComponentRole.PREDICATE);
+                    if (tmp != -1){
+                        return tmp+nSubjects+nObjects;
+                    }
+                    return -1;
+                } 
+
+                CharSequence get(int id){
+                    CharSequence tmp = hdt.getDictionary().idToString(id, TripleComponentRole.SUBJECT);
+                    if (tmp != null){
+                        return tmp;
+                    }
+                    tmp = hdt.getDictionary().idToString(id+nSubjects-nShared, TripleComponentRole.PREDICATE);
+                    if (tmp != null){
+                        return tmp;
+                    }
+                    tmp = hdt.getDictionary().idToString(id+nSubjects+nObjects, TripleComponentRole.OBJECT);
+                    if (tmp != null){
+                        return tmp;
+                    }
+                    return null;
+                }
+        }
+
+
 }
 
