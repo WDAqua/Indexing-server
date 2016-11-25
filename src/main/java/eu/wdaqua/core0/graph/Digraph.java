@@ -81,19 +81,19 @@ public class Digraph {
         //indegree = new int[V];
         adj_in = (TIntArrayList[]) new TIntArrayList[V];
         for (int v = 0; v < V; v++) {
-            adj_in[v] = new TIntArrayList();
+            adj_in[v] = new TIntArrayList(0);
         }
         adj_out = (TIntArrayList[]) new TIntArrayList[V];
         for (int v = 0; v < V; v++) {
-            adj_out[v] = new TIntArrayList();
+            adj_out[v] = new TIntArrayList(0);
         }
         edge_in = (TIntArrayList[]) new TIntArrayList[V];
         for (int v = 0; v < V; v++) {
-            edge_in[v] = new TIntArrayList();
+            edge_in[v] = new TIntArrayList(0);
         }
         edge_out = (TIntArrayList[]) new TIntArrayList[V];
         for (int v = 0; v < V; v++) {
-            edge_out[v] = new TIntArrayList();
+            edge_out[v] = new TIntArrayList(0);
         }
     }
 

@@ -3,6 +3,7 @@ package eu.wdaqua.core0.server;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -41,16 +42,20 @@ import org.rdfhdt.hdt.enums.TripleComponentRole;
 public class Index {
 	
 	String[] dump = new String[1];
+        HDTmap map ;
 
-	private BiMap<String, Integer> map = HashBiMap.create();
-	private BiMap<String, Integer> mapRelation = HashBiMap.create();
 	private int rowI;
 	private int rowR;
 	private Digraph g;
+        private HDTmap map1 = new HDTmap("/home_expes/dd77474h/dbpedia_2016/small.hdt");
 
-	Index(){
-		dump[0]="/home_expes/dd77474h/dbpedia_2016/dump-en-P-CC-yago.ttl";
-		//dump[0]="/home_expes/dd77474h/wikidata/wikidata_change2.ttl";
+	Index() throws IOException {
+		//dump[0]="/home_expes/dd77474h/Indexing-server/reduced.hdt";
+                //dump[0]="/home_expes/dd77474h/dbpedia_2016/dump.ttl";
+		dump[0]="/home_expes/dd77474h/dbpedia_2016/small.ttl";
+                map = new HDTmap("/home_expes/dd77474h/dbpedia_2016/small.hdt");
+                
+                //dump[0]="/home_expes/dd77474h/wikidata/wikidata.ttl";
                 //String dump = "/home_expes/dd77474h/test_small.nt";
                 //String dump = "/home_expes/dd77474h/wikidata/wikidata-instances-old.nt";
                 //String dump = "/home_expes/dd77474h/wikidata/wikidata_change2.ttl";
@@ -71,16 +76,16 @@ public class Index {
 		ArrayList<String> results=new ArrayList<String>();
 		HashSet<String> relations = new HashSet<String>();
 		for (int v = 0; v < uris.length; v++) {
-			if (map.containsKey(uris[v])){
+			if (map.get(uris[v])!=-1){
 				String s=uris[v].replace("http://dbpedia.org/ontology/","");
 				if (Character.isUpperCase(s.charAt(0))==false && uris[v].contains("http://wdaqua/")==false){ //Check that it is not a class
 				int n=map.get(uris[v]);
 					for (int w=0; w < g.adj_out(n).size(); w++) {
 						int next = g.adj_out(n).get(w);
-						String edge1=mapRelation.inverse().get(g.edge_out(n).get(w));
+						String edge1=map.get(g.edge_out(n).get(w));
 						boolean edge1_found=false;
 								relations.add(edge1);
-						String node1=map.inverse().get(g.adj_out(n).get(w));
+						String node1=map.get(g.adj_out(n).get(w));
 						if (urisHash.containsKey(edge1)){
 							c.add(v, urisHash.get(edge1), 1);
 							edge1_found=true;
@@ -89,8 +94,8 @@ public class Index {
 							c.add(v, urisHash.get(node1), 2);
 						}
 						for (int l=0; l<g.adj_out(next).size(); l++){
-								String edge2=mapRelation.inverse().get(g.edge_out(next).get(l));
-								String node2=map.inverse().get(g.adj_out(next).get(l));
+								String edge2=map.get(g.edge_out(next).get(l));
+								String node2=map.get(g.adj_out(next).get(l));
 								i++;
 								if (urisHash.containsKey(edge2)){
 						c.add(v, urisHash.get(edge2), 3);
@@ -111,8 +116,8 @@ public class Index {
 						s=node1.replace("http://dbpedia.org/ontology/","");
 								if (Character.isUpperCase(s.charAt(0))==false){
 									for (int l=0; l<g.adj_in(w).size(); l++){
-								String edge=mapRelation.inverse().get(g.edge_out(n).get(w));
-								String node=map.inverse().get(g.adj_out(n).get(w));
+								String edge=map.get(g.edge_out(n).get(w));
+								String node=map.get(g.adj_out(n).get(w));
 								i++;
 											if (urisHash.containsKey(edge)){
 											B.setEntry(v, urisHash.get(edge), -3.0);
@@ -127,10 +132,10 @@ public class Index {
 					//limits the search to 5000 ingoing edges, to huge for classes
 					for (int w=0; w<min(g.adj_in(n).size(),5000); w++){
 						int next = g.adj_in(n).get(w);
-						String edge1=mapRelation.inverse().get(g.edge_in(n).get(w));
+						String edge1=map.get(g.edge_in(n).get(w));
 						boolean edge1_found=false;
 						relations.add(edge1);
-						String node1=map.inverse().get(g.adj_in(n).get(w));
+						String node1=map.get(g.adj_in(n).get(w));
 						if (urisHash.containsKey(edge1)){
 							c.add(v, urisHash.get(edge1), -1);
 							edge1_found=true;
@@ -140,8 +145,8 @@ public class Index {
 						}
 						i++;
 						for (int l=0; l<g.adj_out(next).size(); l++){
-							String edge2=mapRelation.inverse().get(g.edge_out(next).get(l));
-							String node2=map.inverse().get(g.adj_out(next).get(l));
+							String edge2=map.get(g.edge_out(next).get(l));
+							String node2=map.get(g.adj_out(next).get(l));
 							i++;
 							if (urisHash.containsKey(edge2)){
 								c.add(v, urisHash.get(edge2), -3);
@@ -167,37 +172,50 @@ public class Index {
 			return c;
 	}
 
-
-	public Integer get(String URI) throws IOException, ClassNotFoundException{
-		return (Integer) map.get(URI);
-	}
-
-
-	public String get(Integer i) throws IOException, ClassNotFoundException{
-		return (String)map.inverse().get(i);
-	}
-
 	public void index() throws IOException, ClassNotFoundException{
+            org.apache.log4j.BasicConfigurator.configure();
+/*
+            PrintWriter writer = new PrintWriter("reduced_wikidata.nt", "UTF-8");
+            writer.print("<http://wdaqua/dateLiteral> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://wdaqua/Date>  \n");
+            writer.print("<http://wdaqua/literalNumber> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://wdaqua/Number>  \n");
+            PipedRDFIterator<Triple> iter = parse(dump[0]);
+                while ( iter.hasNext()){
+                    Triple next = iter.next();
+                    if (next.getPredicate().toString().contains("http://www.wikidata.org/prop/direct/")==true){
+                    if (next.getObject().isURI()){
+                        writer.print("<"+next.getSubject()+"> <"+next.getPredicate()+"> <"+next.getObject()+"> \n");
+                    }
+                    if (next.getObject().isLiteral()){
+                        if (next.getObject().getLiteralDatatype()==XSDDatatype.XSDdate
+                            || next.getObject().getLiteralDatatype()==XSDDatatype.XSDdateTime){
+                            writer.print("<"+next.getSubject()+"> <"+next.getPredicate()+"> <http://wdaqua/dateLiteral> \n");               
+                        }
+                        if (next.getObject().getLiteralDatatype()==XSDDatatype.XSDdouble
+                            || next.getObject().getLiteralDatatype()==XSDDatatype.XSDdecimal
+                            || next.getObject().getLiteralDatatype()==XSDDatatype.XSDinteger){
+                            writer.print("<"+next.getSubject()+"> <"+next.getPredicate()+"> <http://wdaqua/literalNumber> \n");
+                        }
+                    }
+                    }
+                }
+                writer.close();
+*/
+
+
+
                 System.out.println("HDT loading ...");
-                HDTmap map1 = new HDTmap("../dbpedia_2016/dump-en-P-CC-yago.hdt");
+                //HDTmap map1 = new HDTmap("/home_expes/dd77474h/Indexing-server/reduced.hdt");
+                HDTmap map1 = new HDTmap("/home_expes/dd77474h/dbpedia_2016/small.hdt");
                 //HDT hdt = HDTManager.loadHDT("../dbpedia_2016/dump-en-P-CC-yago.hdt", null);
-                System.out.println("HDT loaded!");
-                System.out.println("Id 2 "+map1.get(-1));
+                for (int i=0; i<13; i++){
+                    System.out.println("Id "+i+" "+map1.get(i));
+                    System.out.println("Id "+i+" "+map1.get(map1.get(i)));
+                }
                 System.out.println("http://dbpedia.org/resource/Barack_Obama"+map1.get("http://dbpedia.org/resource/Barack_Obama"));
                 //Adddd some uri for literals
 		Integer i=1;
 		Integer before=0;
 		int r=1;
-                mapRelation.put("http://www.w3.org/1999/02/22-rdf-syntax-ns#type", r);
-                r++;
-		map.put("http://wdaqua/Date", i);
-		i++;
-		map.put("http://wdaqua/dateLiteral", i);
-		i++;
-		map.put("http://wdaqua/Number",i);
-		i++;
-		map.put("http://wdaqua/literalNumber",i);
-		i++;
                 
                 System.out.println(map1.nSubjects+map1.nObjects-map1.nShared);
 		g = new Digraph(map1.nSubjects+map1.nObjects-map1.nShared);
@@ -246,6 +264,7 @@ public class Index {
 		}
 		rowI=i;
 		rowR=r;
+
 	}
 
 	public static PipedRDFIterator<Triple> parse(final String dump){
@@ -277,46 +296,48 @@ public class Index {
 
                 HDTmap(String location) throws IOException{
                     hdt = HDTManager.loadHDT(location, null);
-                    System.out.println(hdt.getDictionary().getNshared());
                     nShared = (int)hdt.getDictionary().getNshared();
-                    System.out.println(nShared);
+                    System.out.println("Shared "+nShared);
                     nSubjects = (int)hdt.getDictionary().getNsubjects();
+                    System.out.println("Subjects "+nSubjects);
                     nPredicates = (int)hdt.getDictionary().getNpredicates();
+                    System.out.println("Perdicates "+nPredicates);
                     nObjects = (int)hdt.getDictionary().getNobjects();
+                    System.out.println("Objects "+nObjects);
                 }
 
                 int get(String resource){
                     int tmp = hdt.getDictionary().stringToId(resource, TripleComponentRole.SUBJECT);
                     if (tmp != -1){
-                        return tmp;
+                        return (tmp-1);
                     }
                     tmp = hdt.getDictionary().stringToId(resource, TripleComponentRole.OBJECT);
                     if (tmp != -1){
                         if (tmp<nShared){
-                            return tmp;
+                            return (tmp-1);
                         } else {
-                            return tmp+nSubjects-nShared;
+                            return (tmp-1)+nSubjects-nShared;
                         }
                     }
                     tmp = hdt.getDictionary().stringToId(resource, TripleComponentRole.PREDICATE);
                     if (tmp != -1){
-                        return tmp+nSubjects+nObjects;
+                        return (tmp-1)+nSubjects+nObjects-nShared;
                     }
                     return -1;
                 } 
 
-                CharSequence get(int id){
-                    CharSequence tmp = hdt.getDictionary().idToString(id, TripleComponentRole.SUBJECT);
-                    if (tmp != null){
-                        return tmp;
+                String get(int id){
+                    if (id<nSubjects){
+                        CharSequence tmp = hdt.getDictionary().idToString((id+1), TripleComponentRole.SUBJECT);
+                        return tmp.toString();
                     }
-                    tmp = hdt.getDictionary().idToString(id+nSubjects-nShared, TripleComponentRole.PREDICATE);
-                    if (tmp != null){
-                        return tmp;
+                    if (id>=nSubjects && id <nSubjects+nObjects-nShared){
+                        CharSequence tmp = hdt.getDictionary().idToString((id+1)-nSubjects+nShared, TripleComponentRole.OBJECT);
+                        return tmp.toString();
                     }
-                    tmp = hdt.getDictionary().idToString(id+nSubjects+nObjects, TripleComponentRole.OBJECT);
-                    if (tmp != null){
-                        return tmp;
+                    if (id>=nSubjects+nObjects-nShared){
+                        CharSequence tmp = hdt.getDictionary().idToString((id+1)-nSubjects-nObjects+nShared, TripleComponentRole.PREDICATE);
+                        return tmp.toString();
                     }
                     return null;
                 }
