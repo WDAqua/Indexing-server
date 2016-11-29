@@ -47,14 +47,14 @@ public class Index {
 	private int rowI;
 	private int rowR;
 	private Digraph g;
-        private HDTmap map1 = new HDTmap("/home_expes/dd77474h/dbpedia_2016/small.hdt");
 
 	Index() throws IOException {
-		//dump[0]="/home_expes/dd77474h/Indexing-server/reduced.hdt";
+		dump[0]="/home_expes/dd77474h/Indexing-server/reduced_dbpedia.ttl";
                 //dump[0]="/home_expes/dd77474h/dbpedia_2016/dump.ttl";
-		dump[0]="/home_expes/dd77474h/dbpedia_2016/small.ttl";
-                map = new HDTmap("/home_expes/dd77474h/dbpedia_2016/small.hdt");
-                
+		//dump[0]="/home_expes/dd77474h/dbpedia_2016/small.ttl";
+                //map = new HDTmap("/home_expes/dd77474h/Indexing-server/reduced_dbpedia.hdt");
+                map = new HDTmap("/home_expes/dd77474h/Indexing-server/reduced_dbpedia.hdt");        
+        
                 //dump[0]="/home_expes/dd77474h/wikidata/wikidata.ttl";
                 //String dump = "/home_expes/dd77474h/test_small.nt";
                 //String dump = "/home_expes/dd77474h/wikidata/wikidata-instances-old.nt";
@@ -76,7 +76,7 @@ public class Index {
 		ArrayList<String> results=new ArrayList<String>();
 		HashSet<String> relations = new HashSet<String>();
 		for (int v = 0; v < uris.length; v++) {
-			if (map.get(uris[v])!=-1){
+			if (map.get(uris[v])!=-1 && map.get(uris[v])<map.nSubjects+map.nObjects-map.nShared){
 				String s=uris[v].replace("http://dbpedia.org/ontology/","");
 				if (Character.isUpperCase(s.charAt(0))==false && uris[v].contains("http://wdaqua/")==false){ //Check that it is not a class
 				int n=map.get(uris[v]);
@@ -175,28 +175,28 @@ public class Index {
 	public void index() throws IOException, ClassNotFoundException{
             org.apache.log4j.BasicConfigurator.configure();
 /*
-            PrintWriter writer = new PrintWriter("reduced_wikidata.nt", "UTF-8");
-            writer.print("<http://wdaqua/dateLiteral> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://wdaqua/Date>  \n");
-            writer.print("<http://wdaqua/literalNumber> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://wdaqua/Number>  \n");
+            PrintWriter writer = new PrintWriter("reduced_dbpedia.ttl", "UTF-8");
+            writer.print("<http://wdaqua/dateLiteral> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://wdaqua/Date> . \n");
+            writer.print("<http://wdaqua/literalNumber> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://wdaqua/Number> . \n");
             PipedRDFIterator<Triple> iter = parse(dump[0]);
                 while ( iter.hasNext()){
                     Triple next = iter.next();
-                    if (next.getPredicate().toString().contains("http://www.wikidata.org/prop/direct/")==true){
+                    //if (next.getPredicate().toString().contains("http://www.wikidata.org/prop/direct/")==true){
                     if (next.getObject().isURI()){
-                        writer.print("<"+next.getSubject()+"> <"+next.getPredicate()+"> <"+next.getObject()+"> \n");
+                        writer.print("<"+next.getSubject()+"> <"+next.getPredicate()+"> <"+next.getObject()+"> . \n");
                     }
                     if (next.getObject().isLiteral()){
                         if (next.getObject().getLiteralDatatype()==XSDDatatype.XSDdate
                             || next.getObject().getLiteralDatatype()==XSDDatatype.XSDdateTime){
-                            writer.print("<"+next.getSubject()+"> <"+next.getPredicate()+"> <http://wdaqua/dateLiteral> \n");               
+                            writer.print("<"+next.getSubject()+"> <"+next.getPredicate()+"> <http://wdaqua/dateLiteral> . \n");               
                         }
                         if (next.getObject().getLiteralDatatype()==XSDDatatype.XSDdouble
                             || next.getObject().getLiteralDatatype()==XSDDatatype.XSDdecimal
                             || next.getObject().getLiteralDatatype()==XSDDatatype.XSDinteger){
-                            writer.print("<"+next.getSubject()+"> <"+next.getPredicate()+"> <http://wdaqua/literalNumber> \n");
+                            writer.print("<"+next.getSubject()+"> <"+next.getPredicate()+"> <http://wdaqua/literalNumber> . \n");
                         }
                     }
-                    }
+                    //}
                 }
                 writer.close();
 */
@@ -205,20 +205,20 @@ public class Index {
 
                 System.out.println("HDT loading ...");
                 //HDTmap map1 = new HDTmap("/home_expes/dd77474h/Indexing-server/reduced.hdt");
-                HDTmap map1 = new HDTmap("/home_expes/dd77474h/dbpedia_2016/small.hdt");
+                //HDTmap map1 = new HDTmap("/home_expes/dd77474h/dbpedia_2016/small.hdt");
                 //HDT hdt = HDTManager.loadHDT("../dbpedia_2016/dump-en-P-CC-yago.hdt", null);
-                for (int i=0; i<13; i++){
-                    System.out.println("Id "+i+" "+map1.get(i));
-                    System.out.println("Id "+i+" "+map1.get(map1.get(i)));
-                }
-                System.out.println("http://dbpedia.org/resource/Barack_Obama"+map1.get("http://dbpedia.org/resource/Barack_Obama"));
+                //for (int i=0; i<13; i++){
+                //    System.out.println("Id "+i+" "+map1.get(i));
+                //    System.out.println("Id "+i+" "+map1.get(map1.get(i)));
+                //}
+                //System.out.println("http://dbpedia.org/resource/Barack_Obama"+map1.get("http://dbpedia.org/resource/Barack_Obama"));
                 //Adddd some uri for literals
 		Integer i=1;
 		Integer before=0;
 		int r=1;
                 
-                System.out.println(map1.nSubjects+map1.nObjects-map1.nShared);
-		g = new Digraph(map1.nSubjects+map1.nObjects-map1.nShared);
+                System.out.println(map.nSubjects+map.nObjects-map.nShared);
+		g = new Digraph(map.nSubjects+map.nObjects-map.nShared);
 		//g.addEdge(map.get("http://wdaqua/dateLiteral"), mapRelation.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), map.get("http://wdaqua/Date"));
 		//g.addEdge(map.get("http://wdaqua/literalNumber"), mapRelation.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), map.get("http://wdaqua/Number"));
 	
@@ -231,15 +231,15 @@ public class Index {
 				Triple next = iter.next();
 				if (k==0 || next.getPredicate().toString().contains("http://www.wikidata.org/prop/direct/")==true){
                                 if (next.getObject().isURI()){
-					Integer s = map1.get(next.getSubject().toString());
-					Integer p = map1.get(next.getPredicate().toString());
-					Integer o = map1.get(next.getObject().toString());
+					Integer s = map.get(next.getSubject().toString());
+					Integer p = map.get(next.getPredicate().toString());
+					Integer o = map.get(next.getObject().toString());
                                         if (s!=-1 && p!=-1 && o!=-1){
 					    g.addEdge(s, p, o);
 					}
 				} else {
-					Integer s = map1.get(next.getSubject().toString());
-					Integer p = map1.get(next.getPredicate().toString());
+					Integer s = map.get(next.getSubject().toString());
+					Integer p = map.get(next.getPredicate().toString());
 					if (s!=-1 && p!=-1){
 						g.addEdge(s, p);
 						//Consider the case where the object is a literal
@@ -264,7 +264,10 @@ public class Index {
 		}
 		rowI=i;
 		rowR=r;
-
+                String[] uri = new String[2];
+                uri[0] = "http://dbpedia.org/resource/Albedo";
+                uri[1] = "http://purl.org/dc/terms/subject";
+                this.get(uri); 
 	}
 
 	public static PipedRDFIterator<Triple> parse(final String dump){
