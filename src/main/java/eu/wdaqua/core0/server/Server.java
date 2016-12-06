@@ -16,7 +16,7 @@ public class Server {
         	System.out.println("Server started!");
         	System.out.println("Indexing starts ...");
         	Index i = new Index();
-        	i.index();
+        	//i.index();
         	System.out.println("\nIndexing finished!");
         	System.out.println("I'm ready!");
         	

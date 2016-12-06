@@ -9,12 +9,13 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.Iterator;
+import java.lang.Iterable;
 //Java wrapper around octave
 import eu.wdaqua.core0.connection.Connection;
 import eu.wdaqua.core0.graph.Digraph;
 import eu.wdaqua.core0.graph.In;
 //Sparse matrix implementation
-import org.apache.commons.math3.linear.OpenMapRealMatrix;
 import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.apache.jena.ext.com.google.common.collect.BiMap;
 import org.apache.jena.ext.com.google.common.collect.HashBiMap;
@@ -33,53 +34,235 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import static java.lang.Integer.min;
 
-import org.rdfhdt.hdt.hdt.HDT;
-import org.rdfhdt.hdt.hdt.HDTManager;
-import org.rdfhdt.hdt.triples.IteratorTripleString;
-import org.rdfhdt.hdt.triples.TripleString;
-import org.rdfhdt.hdt.enums.TripleComponentRole;
+import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Path;
+import org.neo4j.graphdb.PathExpander;
+import org.neo4j.graphdb.PropertyContainer;
+import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.traversal.BranchState;
+import org.neo4j.graphdb.traversal.Evaluator;
+import org.neo4j.graphdb.traversal.Evaluation;
+import org.neo4j.graphdb.traversal.TraversalDescription;
+
+import org.neo4j.io.fs.FileUtils;
+
 
 public class Index {
-	
-	String[] dump = new String[1];
-        HDTmap map ;
 
+        //String[] dump = {"/home_expes/dd77474h/wikidata/wikidata.ttl"};
+        //String[] dump = {"/home_expes/dd77474h/dbpedia_2016/dump.ttl"};
+
+        private static final File DB_PATH = new File( "/home_expes/dd77474h/neo4j-community-3.0.7/data/databases/graph.db" );
+        private static final String DB_CONFIG_PATH = "/home_expes/dd77474h/neo4j-community-3.0.7/conf/neo4j.conf";
+	
 	private int rowI;
 	private int rowR;
-	private Digraph g;
+        private GraphDatabaseService graphDb;
+
+        public enum Labels implements Label {
+            Resource,
+        }
 
 	Index() throws IOException {
-		dump[0]="/home_expes/dd77474h/Indexing-server/reduced_dbpedia.ttl";
-                //dump[0]="/home_expes/dd77474h/dbpedia_2016/dump.ttl";
-		//dump[0]="/home_expes/dd77474h/dbpedia_2016/small.ttl";
-                //map = new HDTmap("/home_expes/dd77474h/Indexing-server/reduced_dbpedia.hdt");
-                map = new HDTmap("/home_expes/dd77474h/Indexing-server/reduced_dbpedia.hdt");        
-        
-                //dump[0]="/home_expes/dd77474h/wikidata/wikidata.ttl";
-                //String dump = "/home_expes/dd77474h/test_small.nt";
-                //String dump = "/home_expes/dd77474h/wikidata/wikidata-instances-old.nt";
-                //String dump = "/home_expes/dd77474h/wikidata/wikidata_change2.ttl";
-                //String dump = "/home_expes/dd77474h/wikidata/out";
-                //String dump = "/home_expes/dd77474h/dbpedia_2016/dump-en-P-CC.ttl";
-                //String dump = "/home_expes/dd77474h/test_small.nt";
-	}
+	    graphDb = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( DB_PATH ).loadPropertiesFromFile( DB_CONFIG_PATH ).newGraphDatabase();
+            //Query for "Warm the cache"
+            String query= "MATCH (n) OPTIONAL MATCH (n)-[r]->() RETURN count(n.uri)+count(r.uri);";
+            //String query="CALL apoc.warmup.run()";
+            graphDb.execute(query);
+            /* 
+            try ( Transaction tx = graphDb.beginTx()) {
+                for ( Node n : GlobalGraphOperations.at(graphDb).getAllNodes()) {
+                    n.getPropertyKeys();
+                    for ( Relationship relationship : n.getRelationships()) {
+                        relationship.getPropertyKeys();
+                        relationship.getStartNode();
+                    }
+                }
+            }*/
+            registerShutdownHook( graphDb );
+        }
 	
 	public Connection get(String[] uris) throws IllegalArgumentException, FileNotFoundException{
-		HashMap<String,Integer> urisHash = new HashMap<String, Integer>();
+	    try ( Transaction tx = graphDb.beginTx() ){
+                HashMap<String,Integer> urisHash = new HashMap<String, Integer>();
 		for (int l=0; l < uris.length; l++){
 			urisHash.put(uris[l],l);
 		}
 
+                //String[] uris2 = {"http://dbpedia.org/resource/Buddenbrooks", "http://dbpedia.org/resource/Thomas_Mann"};
+                //uris = uris2;
+
 		long startTime = System.currentTimeMillis();
 		Connection c = new Connection();
-		int i=0;
-		ArrayList<String> results=new ArrayList<String>();
+		int traversedEdges=0;
 		HashSet<String> relations = new HashSet<String>();
 		for (int v = 0; v < uris.length; v++) {
-			if (map.get(uris[v])!=-1 && map.get(uris[v])<map.nSubjects+map.nObjects-map.nShared){
-				String s=uris[v].replace("http://dbpedia.org/ontology/","");
-				if (Character.isUpperCase(s.charAt(0))==false && uris[v].contains("http://wdaqua/")==false){ //Check that it is not a class
-				int n=map.get(uris[v]);
+                    Node n = graphDb.findNode(Labels.Resource, "uri", uris[v]);
+                    if (n!=null && Character.isUpperCase(uris[v].replace("http://dbpedia.org/ontology/","").charAt(0))==false && uris[v].contains("http://wdaqua/")==false){
+				//if (Character.isUpperCase(s.charAt(0))==false && uris[v].contains("http://wdaqua/")==false){ //Check that it is not a class
+                        System.out.println("Uri "+uris[v]);
+                        Evaluator evaluator_out = new Evaluator() {
+                            public Evaluation evaluate(Path path) {
+                                if(path.length() == 0){
+                                    return Evaluation.EXCLUDE_AND_CONTINUE;
+                                } else if (path.length() == 1){
+                                    String uri = path.endNode().getProperty("uri").toString();
+                                    //String uri = path.endNode().toString();
+                                    if ( Character.isUpperCase(uri.replace("http://dbpedia.org/ontology/","").charAt(0))
+                                        || uri.contains("http://wdaqua/") ){
+                                        return Evaluation.INCLUDE_AND_PRUNE;
+                                    } else {
+                                        return Evaluation.INCLUDE_AND_CONTINUE;
+                                    }
+                                } else {
+                                    return Evaluation.INCLUDE_AND_PRUNE;
+                                }
+                            }
+                        };
+                        //Search forward
+                        long startTime1 = System.currentTimeMillis();
+                        TraversalDescription td = graphDb.traversalDescription()
+                                                .breadthFirst()
+                                                .expand(new ForwardDirection())
+                                                .evaluator(evaluator_out);
+                        int count = 0;
+                        int forward=0;
+                        for (Path path: td.traverse(n)) {
+                            //System.out.println(path);
+                            forward++;
+                            traversedEdges++;
+                            count++;
+                            Iterator<Node> it = path.nodes().iterator();
+                            Iterator<Relationship> it_rel = path.relationships().iterator();
+                            it.next();
+                            if (it.hasNext()){
+                                Relationship relationship = it_rel.next();
+                                Node node = it.next();
+                                boolean edge1_found=false;
+                                String edge1=relationship.getType().toString();
+                                if (urisHash.containsKey(edge1)){
+                                    c.add(v, urisHash.get(edge1), 1);
+                                    edge1_found=true;
+                                }
+                                String node1 = node.getProperty("uri").toString();
+                                //System.out.println(uri);
+                                if (urisHash.containsKey(node1)){
+                                    c.add(v, urisHash.get(node1), 2);
+                                }
+                                if (it.hasNext()){
+                                    relationship = it_rel.next();
+                                    node = it.next();
+                                    String edge2=relationship.getType().toString();
+                                    if (urisHash.containsKey(edge2)){
+                                        c.add(v, urisHash.get(edge2), 3);
+                                        if (edge1_found==true){
+                                            c.add(urisHash.get(edge1), urisHash.get(edge2), 2);
+                                        }
+                                    }
+                                    String node2 = node.getProperty("uri").toString();                    
+                                    if (urisHash.containsKey(node2)){
+                                        c.add(v, urisHash.get(node2), 4);
+                                        if (edge1_found==true){
+                                            c.add(urisHash.get(edge1), urisHash.get(node2), 3);
+                                        }
+                                    }
+                                }
+                            }	
+                        }
+                        long estimatedTime1 = System.currentTimeMillis() - startTime1;
+                        System.out.println("Time "+estimatedTime1);
+                        System.out.println("Traversed forward "+forward);
+                        //Search backwards-forwards
+                        long startTime2 = System.currentTimeMillis();
+                        Evaluator evaluator_in = new Evaluator() {
+                            public Evaluation evaluate(Path path) {
+                                if(path.length() == 0){
+                                    if (path.endNode().getDegree(Direction.INCOMING)<100000){
+                                        return Evaluation.EXCLUDE_AND_CONTINUE;
+                                    } else {
+                                        System.out.println("PRUNED "+path.endNode().getDegree(Direction.INCOMING));
+                                        return Evaluation.EXCLUDE_AND_PRUNE;
+                                    }
+                                } else if (path.length() == 1){
+                                    String uri = path.endNode().getProperty("uri").toString();
+                                    //String uri = path.endNode().toString();
+                                    if ( Character.isUpperCase(uri.replace("http://dbpedia.org/ontology/","").charAt(0))
+                                        || uri.contains("http://wdaqua/") ){
+                                        return Evaluation.INCLUDE_AND_PRUNE;
+                                    } else {
+                                        return Evaluation.INCLUDE_AND_CONTINUE;
+                                    }
+                                } else {
+                                    return Evaluation.INCLUDE_AND_PRUNE;
+                                }
+                            }
+                        };
+                        td = graphDb.traversalDescription()
+                                                .breadthFirst()
+                                                .expand(new BackwardDirection())
+                                                .evaluator(evaluator_in);
+                        int backwards=0;
+                        for (Path path: td.traverse(n)) {
+                            traversedEdges++;
+                            backwards++;
+                            count++;
+                            //System.out.println(path);
+                            Iterator<Node> it = path.nodes().iterator();
+                            Iterator<Relationship> it_rel = path.relationships().iterator();
+                            it.next();
+                            if (it.hasNext()){
+                                Relationship relationship = it_rel.next();
+                                Node node = it.next();
+                                boolean edge1_found=false;
+                                String edge1=relationship.getType().toString();
+                                if (urisHash.containsKey(edge1)){
+                                    c.add(v, urisHash.get(edge1), -1);
+                                    edge1_found=true;
+                                }
+                                String node1 = node.getProperty("uri").toString();
+                                //System.out.println(uri);
+                                if (urisHash.containsKey(node1)){
+                                    c.add(v, urisHash.get(node1), -2);
+                                }
+                                if (it.hasNext()){
+                                    relationship = it_rel.next();
+                                    node = it.next();
+                                    String edge2=relationship.getType().toString();
+                                    if (urisHash.containsKey(edge2)){
+                                        c.add(v, urisHash.get(edge2), -3);
+                                        if (edge1_found==true){
+                                            c.add(urisHash.get(edge1), urisHash.get(edge2), -2);
+                                        }
+                                    }
+                                    String node2 = node.getProperty("uri").toString();
+                                    if (urisHash.containsKey(node2)){
+                                        c.add(v, urisHash.get(node2), -4);
+                                        if (edge1_found==true){
+                                            c.add(urisHash.get(edge1), urisHash.get(node2), -3);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        long estimatedTime2 = System.currentTimeMillis() - startTime2;
+                        System.out.println("Time backwards "+estimatedTime2);
+                        System.out.println("Backwards "+backwards);
+                    }
+                }
+                long estimatedTime = System.currentTimeMillis() - startTime;
+                System.out.println("Time total "+estimatedTime);
+                System.out.println("Traversed edges "+traversedEdges);
+                System.out.println("Number relations "+relations.size()); 
+                return c;
+            }
+        }            
+/*
 					for (int w=0; w < g.adj_out(n).size(); w++) {
 						int next = g.adj_out(n).get(w);
 						String edge1=map.get(g.edge_out(n).get(w));
@@ -109,7 +292,7 @@ public class Index {
 									c.add(urisHash.get(edge1), urisHash.get(node2), 3);
 								}
 							}
-						}
+						}*/
 						/*
 						//Go back but not for classes
 						if (node1!=null){
@@ -128,7 +311,7 @@ public class Index {
 										}
 						}
 						}*/
-					}
+				/*	}
 					//limits the search to 5000 ingoing edges, to huge for classes
 					for (int w=0; w<min(g.adj_in(n).size(),5000); w++){
 						int next = g.adj_in(n).get(w);
@@ -169,19 +352,18 @@ public class Index {
 			System.out.println("Time "+estimatedTime);
 			System.out.println("Traversed edges "+i);
 			System.out.println("Number relations "+relations.size());
-			return c;
-	}
-
+*/
+/*
 	public void index() throws IOException, ClassNotFoundException{
             org.apache.log4j.BasicConfigurator.configure();
-/*
-            PrintWriter writer = new PrintWriter("reduced_dbpedia.ttl", "UTF-8");
+
+            PrintWriter writer = new PrintWriter("reduced_wikidata.ttl", "UTF-8");
             writer.print("<http://wdaqua/dateLiteral> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://wdaqua/Date> . \n");
             writer.print("<http://wdaqua/literalNumber> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://wdaqua/Number> . \n");
             PipedRDFIterator<Triple> iter = parse(dump[0]);
                 while ( iter.hasNext()){
                     Triple next = iter.next();
-                    //if (next.getPredicate().toString().contains("http://www.wikidata.org/prop/direct/")==true){
+                    if (next.getPredicate().toString().contains("http://www.wikidata.org/prop/direct/")==true){
                     if (next.getObject().isURI()){
                         writer.print("<"+next.getSubject()+"> <"+next.getPredicate()+"> <"+next.getObject()+"> . \n");
                     }
@@ -196,80 +378,12 @@ public class Index {
                             writer.print("<"+next.getSubject()+"> <"+next.getPredicate()+"> <http://wdaqua/literalNumber> . \n");
                         }
                     }
-                    //}
+                    }
                 }
                 writer.close();
+        }
+    
 */
-
-
-
-                System.out.println("HDT loading ...");
-                //HDTmap map1 = new HDTmap("/home_expes/dd77474h/Indexing-server/reduced.hdt");
-                //HDTmap map1 = new HDTmap("/home_expes/dd77474h/dbpedia_2016/small.hdt");
-                //HDT hdt = HDTManager.loadHDT("../dbpedia_2016/dump-en-P-CC-yago.hdt", null);
-                //for (int i=0; i<13; i++){
-                //    System.out.println("Id "+i+" "+map1.get(i));
-                //    System.out.println("Id "+i+" "+map1.get(map1.get(i)));
-                //}
-                //System.out.println("http://dbpedia.org/resource/Barack_Obama"+map1.get("http://dbpedia.org/resource/Barack_Obama"));
-                //Adddd some uri for literals
-		Integer i=1;
-		Integer before=0;
-		int r=1;
-                
-                System.out.println(map.nSubjects+map.nObjects-map.nShared);
-		g = new Digraph(map.nSubjects+map.nObjects-map.nShared);
-		//g.addEdge(map.get("http://wdaqua/dateLiteral"), mapRelation.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), map.get("http://wdaqua/Date"));
-		//g.addEdge(map.get("http://wdaqua/literalNumber"), mapRelation.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), map.get("http://wdaqua/Number"));
-	
-                int l=0;	
-                for (int k=0; k< dump.length; k++) {
-			final String d = dump[k];
-			PipedRDFIterator<Triple> iter = parse(d);
-			System.out.println("Parsing the dump "+d+" ...");
-			while ( iter.hasNext()){
-				Triple next = iter.next();
-				if (k==0 || next.getPredicate().toString().contains("http://www.wikidata.org/prop/direct/")==true){
-                                if (next.getObject().isURI()){
-					Integer s = map.get(next.getSubject().toString());
-					Integer p = map.get(next.getPredicate().toString());
-					Integer o = map.get(next.getObject().toString());
-                                        if (s!=-1 && p!=-1 && o!=-1){
-					    g.addEdge(s, p, o);
-					}
-				} else {
-					Integer s = map.get(next.getSubject().toString());
-					Integer p = map.get(next.getPredicate().toString());
-					if (s!=-1 && p!=-1){
-						g.addEdge(s, p);
-						//Consider the case where the object is a literal
-						//if (next.getObject().isLiteral()){
-						//	if (next.getObject().getLiteralDatatype()==XSDDatatype.XSDdate
-						//			|| next.getObject().getLiteralDatatype()==XSDDatatype.XSDdateTime){
-						//		g.addEdge(s,p,map.get("http://wdaqua/dateLiteral"));
-						//	}
-						//	if (next.getObject().getLiteralDatatype()==XSDDatatype.XSDdouble
-						//			|| next.getObject().getLiteralDatatype()==XSDDatatype.XSDdecimal
-						//			|| next.getObject().getLiteralDatatype()==XSDDatatype.XSDinteger){
-						//		g.addEdge(s,p,map.get("http://wdaqua/literalNumber"));
-						//	}
-						//}
-					}
-				}}
-                                if (l%10000==0){
-                                    System.out.println(l);
-                                }
-                                l++;
-			}
-		}
-		rowI=i;
-		rowR=r;
-                String[] uri = new String[2];
-                uri[0] = "http://dbpedia.org/resource/Albedo";
-                uri[1] = "http://purl.org/dc/terms/subject";
-                this.get(uri); 
-	}
-
 	public static PipedRDFIterator<Triple> parse(final String dump){
 		PipedRDFIterator<Triple> iter = new PipedRDFIterator<Triple>(100000, false , 30000, 100);
 		final PipedRDFStream<Triple> inputStream = new PipedTriplesStream(iter);
@@ -288,64 +402,52 @@ public class Index {
 		executor.submit(parser);
 		return iter;
 	}
-    
-        public class HDTmap{
-                private HDT hdt;
-                public int nShared;
-                public int nSubjects;
-                public int nObjects;
-                private int nPredicates;
-                
 
-                HDTmap(String location) throws IOException{
-                    hdt = HDTManager.loadHDT(location, null);
-                    nShared = (int)hdt.getDictionary().getNshared();
-                    System.out.println("Shared "+nShared);
-                    nSubjects = (int)hdt.getDictionary().getNsubjects();
-                    System.out.println("Subjects "+nSubjects);
-                    nPredicates = (int)hdt.getDictionary().getNpredicates();
-                    System.out.println("Perdicates "+nPredicates);
-                    nObjects = (int)hdt.getDictionary().getNobjects();
-                    System.out.println("Objects "+nObjects);
-                }
+        private static void registerShutdownHook( final GraphDatabaseService graphDb ){
+        // Registers a shutdown hook for the Neo4j instance so that it
+        // shuts down nicely when the VM exits (even if you "Ctrl-C" the
+        // running application).
+        Runtime.getRuntime().addShutdownHook( new Thread()
+        {
+            @Override
+            public void run()
+            {
+                graphDb.shutdown();
+            }
+        } );
+    }
 
-                int get(String resource){
-                    int tmp = hdt.getDictionary().stringToId(resource, TripleComponentRole.SUBJECT);
-                    if (tmp != -1){
-                        return (tmp-1);
-                    }
-                    tmp = hdt.getDictionary().stringToId(resource, TripleComponentRole.OBJECT);
-                    if (tmp != -1){
-                        if (tmp<nShared){
-                            return (tmp-1);
-                        } else {
-                            return (tmp-1)+nSubjects-nShared;
-                        }
-                    }
-                    tmp = hdt.getDictionary().stringToId(resource, TripleComponentRole.PREDICATE);
-                    if (tmp != -1){
-                        return (tmp-1)+nSubjects+nObjects-nShared;
-                    }
-                    return -1;
-                } 
 
-                String get(int id){
-                    if (id<nSubjects){
-                        CharSequence tmp = hdt.getDictionary().idToString((id+1), TripleComponentRole.SUBJECT);
-                        return tmp.toString();
-                    }
-                    if (id>=nSubjects && id <nSubjects+nObjects-nShared){
-                        CharSequence tmp = hdt.getDictionary().idToString((id+1)-nSubjects+nShared, TripleComponentRole.OBJECT);
-                        return tmp.toString();
-                    }
-                    if (id>=nSubjects+nObjects-nShared){
-                        CharSequence tmp = hdt.getDictionary().idToString((id+1)-nSubjects-nObjects+nShared, TripleComponentRole.PREDICATE);
-                        return tmp.toString();
-                    }
-                    return null;
-                }
+    private class ForwardDirection<STATE> implements PathExpander<STATE>{
+        @Override
+        public Iterable<Relationship> expand(Path path, BranchState<STATE> state) {
+            if (path.length()==0) {
+                return path.endNode().getRelationships(Direction.OUTGOING);
+            } else {
+                return path.endNode().getRelationships(Direction.OUTGOING);
+            }
         }
 
+        @Override
+        public PathExpander<STATE> reverse() {
+            return this;
+        }
+    }
 
+    private class BackwardDirection<STATE> implements PathExpander<STATE>{
+        @Override
+        public Iterable<Relationship> expand(Path path, BranchState<STATE> state) {
+            if (path.length()==0) {
+                return path.endNode().getRelationships(Direction.INCOMING);
+            } else {
+                return path.endNode().getRelationships(Direction.OUTGOING);
+            }
+        }
+
+        @Override
+        public PathExpander<STATE> reverse() {
+            return this;
+        }
+    }
 }
 
