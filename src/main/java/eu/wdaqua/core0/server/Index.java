@@ -55,7 +55,7 @@ import org.neo4j.io.fs.FileUtils;
 
 public class Index {
 
-        //String[] dump = {"/home_expes/dd77474h/wikidata/wikidata.ttl"};
+        String[] dump = {"/home_expes/dd77474h/wikidata/wikidata.ttl"};
         //String[] dump = {"/home_expes/dd77474h/dbpedia_2016/dump.ttl"};
 
         private static final File DB_PATH = new File( "/home_expes/dd77474h/neo4j-community-3.0.7/data/databases/graph.db" );
@@ -69,8 +69,9 @@ public class Index {
             Resource,
         }
 
-	Index() throws IOException {
-	    graphDb = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( DB_PATH ).loadPropertiesFromFile( DB_CONFIG_PATH ).newGraphDatabase();
+	Index() throws IOException, ClassNotFoundException {
+	    index();
+            graphDb = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( DB_PATH ).loadPropertiesFromFile( DB_CONFIG_PATH ).newGraphDatabase();
             //Query for "Warm the cache"
             String query= "MATCH (n) OPTIONAL MATCH (n)-[r]->() RETURN count(n.uri)+count(r.uri);";
             //String query="CALL apoc.warmup.run()";
@@ -353,13 +354,14 @@ public class Index {
 			System.out.println("Traversed edges "+i);
 			System.out.println("Number relations "+relations.size());
 */
-/*
+
 	public void index() throws IOException, ClassNotFoundException{
             org.apache.log4j.BasicConfigurator.configure();
 
             PrintWriter writer = new PrintWriter("reduced_wikidata.ttl", "UTF-8");
-            writer.print("<http://wdaqua/dateLiteral> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://wdaqua/Date> . \n");
+            writer.print("<http://wdaqua/literalDate> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://wdaqua/Date> . \n");
             writer.print("<http://wdaqua/literalNumber> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://wdaqua/Number> . \n");
+            writer.print("<http://wdaqua/literalLiteral> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://wdaqua/Literal> . \n");
             PipedRDFIterator<Triple> iter = parse(dump[0]);
                 while ( iter.hasNext()){
                     Triple next = iter.next();
@@ -370,12 +372,14 @@ public class Index {
                     if (next.getObject().isLiteral()){
                         if (next.getObject().getLiteralDatatype()==XSDDatatype.XSDdate
                             || next.getObject().getLiteralDatatype()==XSDDatatype.XSDdateTime){
-                            writer.print("<"+next.getSubject()+"> <"+next.getPredicate()+"> <http://wdaqua/dateLiteral> . \n");               
-                        }
-                        if (next.getObject().getLiteralDatatype()==XSDDatatype.XSDdouble
+                            writer.print("<"+next.getSubject()+"> <"+next.getPredicate()+"> <http://wdaqua/literalDate> . \n");               
+                        } else if (next.getObject().getLiteralDatatype()==XSDDatatype.XSDdouble
                             || next.getObject().getLiteralDatatype()==XSDDatatype.XSDdecimal
-                            || next.getObject().getLiteralDatatype()==XSDDatatype.XSDinteger){
+                            || next.getObject().getLiteralDatatype()==XSDDatatype.XSDinteger
+                            || next.getObject().getLiteralDatatype()==XSDDatatype.XSDnonNegativeInteger){
                             writer.print("<"+next.getSubject()+"> <"+next.getPredicate()+"> <http://wdaqua/literalNumber> . \n");
+                        } else {
+                            writer.print("<"+next.getSubject()+"> <"+next.getPredicate()+"> <http://wdaqua/literalLiteral> . \n");
                         }
                     }
                     }
@@ -383,7 +387,7 @@ public class Index {
                 writer.close();
         }
     
-*/
+
 	public static PipedRDFIterator<Triple> parse(final String dump){
 		PipedRDFIterator<Triple> iter = new PipedRDFIterator<Triple>(100000, false , 30000, 100);
 		final PipedRDFStream<Triple> inputStream = new PipedTriplesStream(iter);
