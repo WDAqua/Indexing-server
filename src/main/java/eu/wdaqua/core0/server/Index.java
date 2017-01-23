@@ -34,6 +34,8 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import static java.lang.Integer.min;
 
+import org.neo4j.graphdb.traversal.BranchOrderingPolicy;
+import org.neo4j.graphdb.traversal.BranchSelector;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -44,22 +46,24 @@ import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.traversal.TraversalBranch;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.traversal.BranchState;
 import org.neo4j.graphdb.traversal.Evaluator;
 import org.neo4j.graphdb.traversal.Evaluation;
 import org.neo4j.graphdb.traversal.TraversalDescription;
+import org.neo4j.graphdb.traversal.Uniqueness;
 
 import org.neo4j.io.fs.FileUtils;
-
+import eu.wdaqua.core0.server.DepthFirstBounded;
 
 public class Index {
 
         //String[] dump = {"/home_expes/dd77474h/wikidata/wikidata.ttl"};
         //String[] dump = {"/home_expes/dd77474h/dbpedia_2016/dump.ttl"};
 
-        private static final File DB_PATH = new File( "/home_expes/dd77474h/neo4j-community-3.0.7/data/databases/graph.db" );
-        private static final String DB_CONFIG_PATH = "/home_expes/dd77474h/neo4j-community-3.0.7/conf/neo4j.conf";
+	private static final File DB_PATH = new File( "/home/dd77474h/neo4j-community-3.0.7/data/databases/graph.db" );
+	private static final String DB_CONFIG_PATH = "/home/dd77474h/neo4j-community-3.0.7/conf/neo4j.conf";	
 	
 	private int rowI;
 	private int rowR;
@@ -86,6 +90,8 @@ public class Index {
                 }
             }*/
             registerShutdownHook( graphDb );
+            //String[] uris2 = {"http://www.wikidata.org/entity/Q5"};
+            //this.get(uris2);
         }
 	
 	public Connection get(String[] uris) throws IllegalArgumentException, FileNotFoundException{
@@ -112,14 +118,7 @@ public class Index {
                                 if(path.length() == 0){
                                     return Evaluation.EXCLUDE_AND_CONTINUE;
                                 } else if (path.length() == 1){
-                                    String uri = path.endNode().getProperty("uri").toString();
-                                    //String uri = path.endNode().toString();
-                                    if ( Character.isUpperCase(uri.replace("http://dbpedia.org/ontology/","").charAt(0))
-                                        || uri.contains("http://wdaqua/") ){
-                                        return Evaluation.INCLUDE_AND_PRUNE;
-                                    } else {
                                         return Evaluation.INCLUDE_AND_CONTINUE;
-                                    }
                                 } else {
                                     return Evaluation.INCLUDE_AND_PRUNE;
                                 }
@@ -128,14 +127,21 @@ public class Index {
                         //Search forward
                         long startTime1 = System.currentTimeMillis();
                         TraversalDescription td = graphDb.traversalDescription()
-                                                .breadthFirst()
-                                                .expand(new ForwardDirection())
-                                                .evaluator(evaluator_out);
+                                                .depthFirst()
+                                                /*.order(
+            						new BranchOrderingPolicy(){
+                						public BranchSelector create( TraversalBranch startSource, PathExpander pathExpander ){
+                    							return new DepthFirstBounded( startSource, 5, pathExpander );
+                						}
+            					} )*/
+						.expand(new ForwardDirection())
+                                                .evaluator(evaluator_out)
+						.uniqueness(Uniqueness.NODE_PATH);
                         int count = 0;
                         int forward=0;
                         for (Path path: td.traverse(n)) {
                             //System.out.println(path);
-                            forward++;
+			    forward++;
                             traversedEdges++;
                             count++;
                             Iterator<Node> it = path.nodes().iterator();
@@ -183,12 +189,12 @@ public class Index {
                         Evaluator evaluator_in = new Evaluator() {
                             public Evaluation evaluate(Path path) {
                                 if(path.length() == 0){
-                                    if (path.endNode().getDegree(Direction.INCOMING)<100000){
+                                    //if (path.endNode().getDegree(Direction.INCOMING)<100000){
                                         return Evaluation.EXCLUDE_AND_CONTINUE;
-                                    } else {
-                                        System.out.println("PRUNED "+path.endNode().getDegree(Direction.INCOMING));
-                                        return Evaluation.EXCLUDE_AND_PRUNE;
-                                    }
+                                    //} else {
+                                        //System.out.println("PRUNED "+path.endNode().getDegree(Direction.INCOMING));
+                                        //return Evaluation.EXCLUDE_AND_PRUNE;
+                                    //}
                                 } else if (path.length() == 1){
                                     String uri = path.endNode().getProperty("uri").toString();
                                     //String uri = path.endNode().toString();
@@ -204,9 +210,16 @@ public class Index {
                             }
                         };
                         td = graphDb.traversalDescription()
-                                                .breadthFirst()
-                                                .expand(new BackwardDirection())
-                                                .evaluator(evaluator_in);
+                                                //.breadthFirst()
+                                                .order(
+                                                        new BranchOrderingPolicy(){
+                                                                public BranchSelector create( TraversalBranch startSource, PathExpander pathExpander ){
+                                                                        return new DepthFirstBounded( startSource, 100000, pathExpander );
+                                                                }
+                                                } )
+						.expand(new BackwardDirection())
+                                                .evaluator(evaluator_in)
+						.uniqueness(Uniqueness.NODE_PATH);
                         int backwards=0;
                         for (Path path: td.traverse(n)) {
                             traversedEdges++;
