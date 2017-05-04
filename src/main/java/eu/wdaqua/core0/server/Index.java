@@ -60,10 +60,13 @@ import eu.wdaqua.core0.server.DepthFirstBounded;
 public class Index {
 
         String[] dump = {"/home_expes/dd77474h/wikidata/wikidata.ttl"};
-        //String[] dump = {"/home_expes/dd77474h/dbpedia_2016/dump.ttl"};
+        //String[] dump = {"/home_expes/dd77474h/dbpedia_2016/dump-classes.ttl"};
+        //String[] dump = {"/home_expes/dd77474h/dbpedia_2016/dump-en-P-CC-yago.ttl"};  
 
-	private static final File DB_PATH = new File( "/home/dd77474h/neo4j-community-3.0.7/data/databases/graph.db" );
-	private static final String DB_CONFIG_PATH = "/home/dd77474h/neo4j-community-3.0.7/conf/neo4j.conf";	
+	//private static final File DB_PATH = new File( "/home_expes/dd77474h/neo4j-indeces/dbpedia/databases/graph.db" );
+        private static final File DB_PATH = new File( "/home_expes/dd77474h/neo4j-build/data/databases/graph.db" );
+        //private static final File DB_PATH = new File( "/home_expes/dd77474h/neo4j-community-3.0.7/data/databases/graph.db" );
+	private static final String DB_CONFIG_PATH = "/home_expes/dd77474h/neo4j-community-3.0.7/conf/neo4j.conf";	
 	
 	private int rowI;
 	private int rowR;
@@ -74,7 +77,7 @@ public class Index {
         }
 
 	Index() throws IOException, ClassNotFoundException {
-	    index();
+	    //index();
             graphDb = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( DB_PATH ).loadPropertiesFromFile( DB_CONFIG_PATH ).newGraphDatabase();
             //Query for "Warm the cache"
             String query= "MATCH (n) OPTIONAL MATCH (n)-[r]->() RETURN count(n.uri)+count(r.uri);";
@@ -110,7 +113,12 @@ public class Index {
 		int traversedEdges=0;
 		HashSet<String> relations = new HashSet<String>();
 		for (int v = 0; v < uris.length; v++) {
-                    Node n = graphDb.findNode(Labels.Resource, "uri", uris[v]);
+                    Node n = null;
+                    try {
+                        n = graphDb.findNode(Labels.Resource, "uri", uris[v]);
+                    } catch(Exception e) {
+                        System.out.println("Multiple"+uris[v]+" "+e);
+                    }
                     if (n!=null && Character.isUpperCase(uris[v].replace("http://dbpedia.org/ontology/","").charAt(0))==false && uris[v].contains("http://wdaqua/")==false){
 				//if (Character.isUpperCase(s.charAt(0))==false && uris[v].contains("http://wdaqua/")==false){ //Check that it is not a class
                         System.out.println("Uri "+uris[v]);
@@ -370,34 +378,78 @@ public class Index {
 
 	public void index() throws IOException, ClassNotFoundException{
             org.apache.log4j.BasicConfigurator.configure();
-
-            PrintWriter writer = new PrintWriter("reduced_wikidata.ttl", "UTF-8");
-            writer.print("<http://wdaqua/literalDate> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://wdaqua/Date> . \n");
-            writer.print("<http://wdaqua/literalNumber> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://wdaqua/Number> . \n");
-            writer.print("<http://wdaqua/literalLiteral> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://wdaqua/Literal> . \n");
+            
+            int i=7;
+            HashMap<String, Integer> m = new HashMap<String, Integer>(); 
+            PrintWriter writer1 = new PrintWriter("reduced_wikidata_nodes.csv", "UTF-8");
+            PrintWriter writer2 = new PrintWriter("reduced_wikidata_relations.csv", "UTF-8");
+            writer1.print("id:ID,uri,:LABEL\n");
+            writer2.print(":START_ID,:END_ID,:TYPE\n");
+            writer1.print(1+",\"http://wdaqua/literalDate\",Resource\n");
+            writer1.print(2+",\"http://wdaqua/Date\",Resource\n");
+            writer2.print(1+","+2+",\"http://www.w3.org/1999/02/22-rdf-syntax-ns#type\"\n");
+            //writer.print("<http://wdaqua/literalDate> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://wdaqua/Date> . \n");
+            writer1.print(3+",\"http://wdaqua/literalNumber\",Resource\n");
+            writer1.print(4+",\"http://wdaqua/Number\",Resource\n");
+            writer2.print(3+","+4+",\"http://www.w3.org/1999/02/22-rdf-syntax-ns#type\"\n");
+            //writer.print("<http://wdaqua/literalNumber> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://wdaqua/Number> . \n");
+            writer1.print(5+",\"http://wdaqua/literalLiteral\",Resource\n");
+            writer1.print(6+",\"http://wdaqua/Literal\",Resource\n");
+            writer2.print(5+","+6+",\"http://www.w3.org/1999/02/22-rdf-syntax-ns#type\"\n");
+            //writer.print("<http://wdaqua/literalLiteral> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://wdaqua/Literal> . \n");
             PipedRDFIterator<Triple> iter = parse(dump[0]);
                 while ( iter.hasNext()){
                     Triple next = iter.next();
                     if (next.getPredicate().toString().contains("http://www.wikidata.org/prop/direct/")==true){
-                    if (next.getObject().isURI()){
-                        writer.print("<"+next.getSubject()+"> <"+next.getPredicate()+"> <"+next.getObject()+"> . \n");
+                    if (next.getObject().isURI() && next.getObject().toString().contains("http://dbpedia.org/class/yago")==false){
+                        if (m.containsKey(next.getSubject().toString())==false){
+                            m.put(next.getSubject().toString(), i);
+                            writer1.print(i+",\""+next.getSubject()+"\",Resource\n");
+                            i++;
+                        }
+                        if (m.containsKey(next.getObject().toString())==false){
+                            m.put(next.getObject().toString(), i);
+                            writer1.print(i+",\""+next.getObject()+"\",Resource\n");
+                            i++;
+                        }
+                        writer2.print(m.get(next.getSubject().toString())+","+m.get(next.getObject().toString())+",\""+next.getPredicate()+"\"\n");
+                        //writer.print("<"+next.getSubject()+"> <"+next.getPredicate()+"> <"+next.getObject()+"> . \n");
                     }
                     if (next.getObject().isLiteral()){
                         if (next.getObject().getLiteralDatatype()==XSDDatatype.XSDdate
                             || next.getObject().getLiteralDatatype()==XSDDatatype.XSDdateTime){
-                            writer.print("<"+next.getSubject()+"> <"+next.getPredicate()+"> <http://wdaqua/literalDate> . \n");               
+                            if (m.containsKey(next.getSubject().toString())==false){
+                                m.put(next.getSubject().toString(), i);
+                                writer1.print(i+",\""+next.getSubject()+"\",Resource\n");
+                                i++;
+                            }
+                            writer2.print(m.get(next.getSubject().toString())+","+1+",\""+next.getPredicate()+"\"\n");
+                            //writer.print("<"+next.getSubject()+"> <"+next.getPredicate()+"> <http://wdaqua/literalDate> . \n");               
                         } else if (next.getObject().getLiteralDatatype()==XSDDatatype.XSDdouble
                             || next.getObject().getLiteralDatatype()==XSDDatatype.XSDdecimal
                             || next.getObject().getLiteralDatatype()==XSDDatatype.XSDinteger
                             || next.getObject().getLiteralDatatype()==XSDDatatype.XSDnonNegativeInteger){
-                            writer.print("<"+next.getSubject()+"> <"+next.getPredicate()+"> <http://wdaqua/literalNumber> . \n");
+                            if (m.containsKey(next.getSubject().toString())==false){
+                                m.put(next.getSubject().toString(), i);
+                                writer1.print(i+",\""+next.getSubject()+"\",Resource\n");
+                                i++;
+                            }
+                            writer2.print(m.get(next.getSubject().toString())+","+3+",\""+next.getPredicate()+"\"\n");
+                            //writer.print("<"+next.getSubject()+"> <"+next.getPredicate()+"> <http://wdaqua/literalNumber> . \n");
                         } else {
-                            writer.print("<"+next.getSubject()+"> <"+next.getPredicate()+"> <http://wdaqua/literalLiteral> . \n");
+                            if (m.containsKey(next.getSubject().toString())==false){
+                                m.put(next.getSubject().toString(), i);
+                                writer1.print(i+",\""+next.getSubject()+"\",Resource\n");
+                                i++;
+                            }
+                            writer2.print(m.get(next.getSubject().toString())+","+5+",\""+next.getPredicate()+"\"\n");
+                            //writer.print("<"+next.getSubject()+"> <"+next.getPredicate()+"> <http://wdaqua/literalLiteral> . \n");
                         }
                     }
                     }
                 }
-                writer.close();
+                writer1.close();
+                writer2.close();
         }
     
 
